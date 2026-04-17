@@ -1,449 +1,511 @@
--- MySQL Workbench Forward Engineering
-
 SET @OLD_UNIQUE_CHECKS=@@UNIQUE_CHECKS, UNIQUE_CHECKS=0;
 SET @OLD_FOREIGN_KEY_CHECKS=@@FOREIGN_KEY_CHECKS, FOREIGN_KEY_CHECKS=0;
-SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='ONLY_FULL_GROUP_BY,STRICT_TRANS_TABLES,NO_ZERO_IN_DATE,NO_ZERO_DATE,ERROR_FOR_DIVISION_BY_ZERO,NO_ENGINE_SUBSTITUTION';
-
--- -----------------------------------------------------
--- Schema Distribution
--- -----------------------------------------------------
-DROP SCHEMA IF EXISTS `Distribution` ;
-
--- -----------------------------------------------------
--- Schema Distribution
--- -----------------------------------------------------
-CREATE SCHEMA IF NOT EXISTS `Distribution` DEFAULT CHARACTER SET utf8 ;
-USE `Distribution` ;
-
--- -----------------------------------------------------
--- Table `Distribution`.`Region`
--- -----------------------------------------------------
-DROP TABLE IF EXISTS `Distribution`.`Region` ;
-
-CREATE TABLE IF NOT EXISTS `Distribution`.`Region` (
-  `id_Region` INT NOT NULL AUTO_INCREMENT,
-  `Nombre_region` VARCHAR(45) NULL,
-  PRIMARY KEY (`id_Region`))
-ENGINE = InnoDB;
-
-
--- -----------------------------------------------------
--- Table `Distribution`.`Comunas`
--- -----------------------------------------------------
-DROP TABLE IF EXISTS `Distribution`.`Comunas` ;
-
-CREATE TABLE IF NOT EXISTS `Distribution`.`Comunas` (
-  `id_comuna` INT NOT NULL AUTO_INCREMENT,
-  `id_region` INT NOT NULL,
-  `Nombre_comuna` VARCHAR(45) NULL,
-  PRIMARY KEY (`id_comuna`),
-  CONSTRAINT `fk_comunas_id_region`
-    FOREIGN KEY (`id_region`)
-    REFERENCES `Distribution`.`Region` (`id_Region`)
-    ON DELETE NO ACTION
-    ON UPDATE NO ACTION)
-ENGINE = InnoDB;
-
-CREATE INDEX `id_region_idx` ON `Distribution`.`Comunas` (`id_region` ASC) INVISIBLE;
-
-
--- -----------------------------------------------------
--- Table `Distribution`.`Ciudad`
--- -----------------------------------------------------
-DROP TABLE IF EXISTS `Distribution`.`Ciudad` ;
-
-CREATE TABLE IF NOT EXISTS `Distribution`.`Ciudad` (
-  `id_Ciudad` INT NOT NULL AUTO_INCREMENT,
-  `id_comuna` INT NOT NULL,
-  `nombre_ciudad` VARCHAR(45) NULL,
-  PRIMARY KEY (`id_Ciudad`),
-  CONSTRAINT `fk_comuna_id_comuna`
-    FOREIGN KEY (`id_comuna`)
-    REFERENCES `Distribution`.`Comunas` (`id_comuna`)
-    ON DELETE NO ACTION
-    ON UPDATE NO ACTION)
-ENGINE = InnoDB;
-
-
--- -----------------------------------------------------
--- Table `Distribution`.`Empresa`
--- -----------------------------------------------------
-DROP TABLE IF EXISTS `Distribution`.`Empresa` ;
-
-CREATE TABLE IF NOT EXISTS `Distribution`.`Empresa` (
-  `id_empresa` INT NOT NULL AUTO_INCREMENT,
-  `nombre_empresa` VARCHAR(50) NULL,
-  `Rut_empresa` INT NOT NULL,
-  `calle_empresa` VARCHAR(50) NULL,
-  `numero_calle_empresa` INT NULL,
-  `id_region` INT NOT NULL,
-  `id_comuna` INT NOT NULL,
-  `id_ciudad` INT NOT NULL,
-  PRIMARY KEY (`id_empresa`),
-  CONSTRAINT `fk_empresa_id_comuna`
-    FOREIGN KEY (`id_comuna`)
-    REFERENCES `Distribution`.`Comunas` (`id_comuna`)
-    ON DELETE NO ACTION
-    ON UPDATE NO ACTION,
-  CONSTRAINT `fk_empresa_id_ciudad`
-    FOREIGN KEY (`id_ciudad`)
-    REFERENCES `Distribution`.`Ciudad` (`id_Ciudad`)
-    ON DELETE NO ACTION
-    ON UPDATE NO ACTION,
-  CONSTRAINT `fk_empresa_id_region`
-    FOREIGN KEY (`id_region`)
-    REFERENCES `Distribution`.`Region` (`id_Region`)
-    ON DELETE NO ACTION
-    ON UPDATE NO ACTION)
-ENGINE = InnoDB;
-
-CREATE UNIQUE INDEX `Rut_empresa_UNIQUE` ON `Distribution`.`Empresa` (`Rut_empresa` ASC) VISIBLE;
-
-CREATE INDEX `id_comuna_idx` ON `Distribution`.`Empresa` (`id_comuna` ASC) VISIBLE;
-
-CREATE INDEX `id_ciudad_idx` ON `Distribution`.`Empresa` (`id_ciudad` ASC) VISIBLE;
-
-CREATE INDEX `id_region_idx` ON `Distribution`.`Empresa` (`id_region` ASC) VISIBLE;
-
-
--- -----------------------------------------------------
--- Table `Distribution`.`Usuarios`
--- -----------------------------------------------------
-DROP TABLE IF EXISTS `Distribution`.`Usuarios` ;
-
-CREATE TABLE IF NOT EXISTS `Distribution`.`Usuarios` (
-  `id_Usuarios` INT NOT NULL AUTO_INCREMENT,
-  `Nombres` VARCHAR(45) NULL,
-  `Apellido_paterno` VARCHAR(45) NULL,
-  `Apellido_materno` VARCHAR(45) NULL,
-  `celular` VARCHAR(20) NULL,
-  PRIMARY KEY (`id_Usuarios`))
-ENGINE = InnoDB;
-
-CREATE UNIQUE INDEX `celular_UNIQUE` ON `Distribution`.`Usuarios` (`celular` ASC) VISIBLE;
-
-
--- -----------------------------------------------------
--- Table `Distribution`.`Login`
--- -----------------------------------------------------
-DROP TABLE IF EXISTS `Distribution`.`Login` ;
-
-CREATE TABLE IF NOT EXISTS `Distribution`.`Login` (
-  `id_login` INT NOT NULL AUTO_INCREMENT,
-  `email` VARCHAR(256) NOT NULL,
-  `password` VARCHAR(255) NOT NULL,
-  `id_Usuarios` INT NOT NULL,
-  `verificado` TINYINT NOT NULL DEFAULT 1,
-  `fecha_creacion` DATETIME NOT NULL,
-  `fecha_modificacion` DATETIME NOT NULL,
-  PRIMARY KEY (`id_login`),
-  CONSTRAINT `fk_login_id_Usuarios`
-    FOREIGN KEY (`id_Usuarios`)
-    REFERENCES `Distribution`.`Usuarios` (`id_Usuarios`)
-    ON DELETE CASCADE
-    ON UPDATE NO ACTION)
-ENGINE = InnoDB;
-
-CREATE INDEX `id_Usuarios_idx` ON `Distribution`.`Login` (`id_Usuarios` ASC) VISIBLE;
-
-CREATE UNIQUE INDEX `email_UNIQUE` ON `Distribution`.`Login` (`email` ASC) VISIBLE;
-
-
--- -----------------------------------------------------
--- Table `Distribution`.`Empleados`
--- -----------------------------------------------------
-DROP TABLE IF EXISTS `Distribution`.`Empleados` ;
-
-CREATE TABLE IF NOT EXISTS `Distribution`.`Empleados` (
-  `id_Empleados` INT NOT NULL AUTO_INCREMENT,
-  `id_Usuarios` INT NOT NULL,
-  `id_empresa` INT NULL,
-  `cargo` VARCHAR(100) NULL,
-  `borrado` TINYINT NULL DEFAULT 0,
-  `fecha_borrado` DATE NULL DEFAULT NULL,
-  `borrado_por` INT NULL,
-  PRIMARY KEY (`id_Empleados`),
-  CONSTRAINT `fk_empleados_id_usuarios`
-    FOREIGN KEY (`borrado_por`)
-    REFERENCES `Distribution`.`Usuarios` (`id_Usuarios`)
-    ON DELETE NO ACTION
-    ON UPDATE NO ACTION,
-  CONSTRAINT `fk_empleados_id_empresa`
-    FOREIGN KEY (`id_empresa`)
-    REFERENCES `Distribution`.`Empresa` (`id_empresa`)
-    ON DELETE NO ACTION
-    ON UPDATE NO ACTION)
-ENGINE = InnoDB;
-
-CREATE INDEX `id_usuarios_idx` ON `Distribution`.`Empleados` (`borrado_por` ASC) VISIBLE;
-
-CREATE INDEX `id_empresa_idx` ON `Distribution`.`Empleados` (`id_empresa` ASC) VISIBLE;
-
-
--- -----------------------------------------------------
--- Table `Distribution`.`lista_giros`
--- -----------------------------------------------------
-DROP TABLE IF EXISTS `Distribution`.`lista_giros` ;
-
-CREATE TABLE IF NOT EXISTS `Distribution`.`lista_giros` (
-  `id_giros` INT NOT NULL AUTO_INCREMENT,
-  `nombre_giro` VARCHAR(256) NULL,
-  `codigo_giro` INT NULL,
-  PRIMARY KEY (`id_giros`))
-ENGINE = InnoDB;
-
-CREATE UNIQUE INDEX `codigo_giro_UNIQUE` ON `Distribution`.`lista_giros` (`codigo_giro` ASC) VISIBLE;
-
-
--- -----------------------------------------------------
--- Table `Distribution`.`Giros_empresa`
--- -----------------------------------------------------
-DROP TABLE IF EXISTS `Distribution`.`Giros_empresa` ;
-
-CREATE TABLE IF NOT EXISTS `Distribution`.`Giros_empresa` (
-  `id_Giros_empresa` INT NOT NULL AUTO_INCREMENT,
-  `id_giro` INT NULL,
-  `id_empresa` INT NULL,
-  PRIMARY KEY (`id_Giros_empresa`),
-  CONSTRAINT `fk_giro_empresa_id_giro`
-    FOREIGN KEY (`id_giro`)
-    REFERENCES `Distribution`.`lista_giros` (`id_giros`)
-    ON DELETE NO ACTION
-    ON UPDATE NO ACTION,
-  CONSTRAINT `fk_giro_empresa_id_empresa`
-    FOREIGN KEY (`id_empresa`)
-    REFERENCES `Distribution`.`Empresa` (`id_empresa`)
-    ON DELETE NO ACTION
-    ON UPDATE NO ACTION)
-ENGINE = InnoDB;
-
-CREATE INDEX `id_giro_idx` ON `Distribution`.`Giros_empresa` (`id_giro` ASC) VISIBLE;
-
-CREATE INDEX `id_empresa_idx` ON `Distribution`.`Giros_empresa` (`id_empresa` ASC) VISIBLE;
-
-
--- -----------------------------------------------------
--- Table `Distribution`.`Clientes`
--- -----------------------------------------------------
-DROP TABLE IF EXISTS `Distribution`.`Clientes` ;
-
-CREATE TABLE IF NOT EXISTS `Distribution`.`Clientes` (
-  `id_Clientes` INT NOT NULL AUTO_INCREMENT,
-  `id_empresa` INT NULL,
-  `Nombre_cliente` VARCHAR(100) NULL,
-  `Rut_cliente` INT NULL,
-  `Giro_cliente` INT NULL,
-  `Calle_cliente` VARCHAR(50) NULL,
-  `Numero_calle_cliente` INT NULL,
-  `Region_cliente` INT NOT NULL,
-  `comuna_cliente` INT NOT NULL,
-  `Ciudad_cliente` INT NOT NULL,
-  PRIMARY KEY (`id_Clientes`),
-  CONSTRAINT `fk_clientes_id_empresa`
-    FOREIGN KEY (`id_empresa`)
-    REFERENCES `Distribution`.`Empresa` (`id_empresa`)
-    ON DELETE NO ACTION
-    ON UPDATE NO ACTION,
-  CONSTRAINT `fk_clientes_comuna_cliente`
-    FOREIGN KEY (`comuna_cliente`)
-    REFERENCES `Distribution`.`Comunas` (`id_comuna`)
-    ON DELETE NO ACTION
-    ON UPDATE NO ACTION,
-  CONSTRAINT `fk_clientes_Ciudad_cliente`
-    FOREIGN KEY (`Ciudad_cliente`)
-    REFERENCES `Distribution`.`Ciudad` (`id_Ciudad`)
-    ON DELETE NO ACTION
-    ON UPDATE NO ACTION,
-  CONSTRAINT `fk_clientes_region_cliente`
-    FOREIGN KEY (`Region_cliente`)
-    REFERENCES `Distribution`.`Region` (`id_Region`)
-    ON DELETE NO ACTION
-    ON UPDATE NO ACTION)
-ENGINE = InnoDB;
-
-CREATE INDEX `id_empresa_idx` ON `Distribution`.`Clientes` (`id_empresa` ASC) VISIBLE;
-
-CREATE INDEX `comuna_cliente_idx` ON `Distribution`.`Clientes` (`comuna_cliente` ASC) VISIBLE;
-
-CREATE INDEX `Ciudad_cliente_idx` ON `Distribution`.`Clientes` (`Ciudad_cliente` ASC) VISIBLE;
-
-CREATE INDEX `region_cliente_idx` ON `Distribution`.`Clientes` (`Region_cliente` ASC) VISIBLE;
-
-
--- -----------------------------------------------------
--- Table `Distribution`.`Bodega`
--- -----------------------------------------------------
-DROP TABLE IF EXISTS `Distribution`.`Bodega` ;
-
-CREATE TABLE IF NOT EXISTS `Distribution`.`Bodega` (
-  `id_Bodega` INT NOT NULL AUTO_INCREMENT,
-  `id_empresa` INT NOT NULL,
-  `id_Region` INT NOT NULL,
-  `id_comuna` INT NOT NULL,
-  `id_ciudad` INT NOT NULL,
-  `nombre_bodega` VARCHAR(45) NOT NULL,
-  `Calle_bodega` VARCHAR(45) NOT NULL,
-  `numero_calle_bodega` INT NULL,
-  PRIMARY KEY (`id_Bodega`),
-  CONSTRAINT `fk_bodega_id_empresa`
-    FOREIGN KEY (`id_empresa`)
-    REFERENCES `Distribution`.`Empresa` (`id_empresa`)
-    ON DELETE NO ACTION
-    ON UPDATE NO ACTION,
-  CONSTRAINT `fk_bodega_id_region`
-    FOREIGN KEY (`id_Region`)
-    REFERENCES `Distribution`.`Region` (`id_Region`)
-    ON DELETE NO ACTION
-    ON UPDATE NO ACTION,
-  CONSTRAINT `fk_bodega_id_comuna`
-    FOREIGN KEY (`id_comuna`)
-    REFERENCES `Distribution`.`Comunas` (`id_comuna`)
-    ON DELETE NO ACTION
-    ON UPDATE NO ACTION,
-  CONSTRAINT `fk_bodega_id_ciudad`
-    FOREIGN KEY (`id_ciudad`)
-    REFERENCES `Distribution`.`Ciudad` (`id_Ciudad`)
-    ON DELETE NO ACTION
-    ON UPDATE NO ACTION)
-ENGINE = InnoDB;
-
-CREATE INDEX `id_empresa_idx` ON `Distribution`.`Bodega` (`id_empresa` ASC) VISIBLE;
-
-CREATE INDEX `id_region_idx` ON `Distribution`.`Bodega` (`id_Region` ASC) VISIBLE;
-
-CREATE INDEX `id_comuna_idx` ON `Distribution`.`Bodega` (`id_comuna` ASC) VISIBLE;
-
-CREATE INDEX `id_ciudad_idx` ON `Distribution`.`Bodega` (`id_ciudad` ASC) VISIBLE;
-
-
--- -----------------------------------------------------
--- Table `Distribution`.`Proveedores`
--- -----------------------------------------------------
-DROP TABLE IF EXISTS `Distribution`.`Proveedores` ;
-
-CREATE TABLE IF NOT EXISTS `Distribution`.`Proveedores` (
-  `id_Proveedores` INT NOT NULL AUTO_INCREMENT,
-  `id_empresa` INT NOT NULL,
-  `rut_proveedor` INT NOT NULL,
-  `nombre_proveedor` VARCHAR(45) NULL,
-  `nombre_vendedor` VARCHAR(45) NULL,
-  `celular_vendedor` INT NULL,
-  `email_vendedor` VARCHAR(256) NULL,
-  PRIMARY KEY (`id_Proveedores`),
-  CONSTRAINT `fk_proveedores_id_empresa`
-    FOREIGN KEY (`id_empresa`)
-    REFERENCES `Distribution`.`Empresa` (`id_empresa`)
-    ON DELETE NO ACTION
-    ON UPDATE NO ACTION)
-ENGINE = InnoDB;
-
-CREATE UNIQUE INDEX `rut_proveedor_UNIQUE` ON `Distribution`.`Proveedores` (`rut_proveedor` ASC) VISIBLE;
-
-CREATE INDEX `id_empresa_idx` ON `Distribution`.`Proveedores` (`id_empresa` ASC) VISIBLE;
-
-
--- -----------------------------------------------------
--- Table `Distribution`.`producto`
--- -----------------------------------------------------
-DROP TABLE IF EXISTS `Distribution`.`producto` ;
-
-CREATE TABLE IF NOT EXISTS `Distribution`.`producto` (
-  `id_producto` INT NOT NULL,
-  `id_proveedor` INT NOT NULL,
-  `id_empresa` INT NOT NULL,
-  `nombre_producto` VARCHAR(45) NULL,
-  PRIMARY KEY (`id_producto`),
-  CONSTRAINT `fk_producto_id_proveedor`
-    FOREIGN KEY (`id_proveedor`)
-    REFERENCES `Distribution`.`Proveedores` (`id_Proveedores`)
-    ON DELETE NO ACTION
-    ON UPDATE NO ACTION,
-  CONSTRAINT `fk_producto_id_empresa`
-    FOREIGN KEY (`id_empresa`)
-    REFERENCES `Distribution`.`Empresa` (`id_empresa`)
-    ON DELETE NO ACTION
-    ON UPDATE NO ACTION)
-ENGINE = InnoDB;
-
-CREATE INDEX `id_proveedor_idx` ON `Distribution`.`producto` (`id_proveedor` ASC) VISIBLE;
-
-CREATE INDEX `id_empresa_idx` ON `Distribution`.`producto` (`id_empresa` ASC) VISIBLE;
-
-
--- -----------------------------------------------------
--- Table `Distribution`.`inventario`
--- -----------------------------------------------------
-DROP TABLE IF EXISTS `Distribution`.`inventario` ;
-
-CREATE TABLE IF NOT EXISTS `Distribution`.`inventario` (
-  `id_nventario` INT NOT NULL,
-  `id_bodega` INT NOT NULL,
-  `id_producto` INT NOT NULL,
-  `stock_producto` INT NOT NULL,
-  PRIMARY KEY (`id_nventario`),
-  CONSTRAINT `fk_inventario_id_bodega`
-    FOREIGN KEY (`id_bodega`)
-    REFERENCES `Distribution`.`Bodega` (`id_Bodega`)
-    ON DELETE NO ACTION
-    ON UPDATE NO ACTION,
-  CONSTRAINT `fk_inventario_id_producto`
-    FOREIGN KEY (`id_producto`)
-    REFERENCES `Distribution`.`producto` (`id_producto`)
-    ON DELETE NO ACTION
-    ON UPDATE NO ACTION)
-ENGINE = InnoDB;
-
-CREATE INDEX `id_bodega_idx` ON `Distribution`.`inventario` (`id_bodega` ASC) VISIBLE;
-
-CREATE INDEX `id_producto_idx` ON `Distribution`.`inventario` (`id_producto` ASC) VISIBLE;
-
-
--- -----------------------------------------------------
--- Table `Distribution`.`flota`
--- -----------------------------------------------------
-DROP TABLE IF EXISTS `Distribution`.`flota` ;
-
-CREATE TABLE IF NOT EXISTS `Distribution`.`flota` (
-  `id_flota` INT NOT NULL,
-  `nombre_flota` VARCHAR(45) NOT NULL,
-  `id_bodega` INT NOT NULL,
-  PRIMARY KEY (`id_flota`),
-  CONSTRAINT `fk_bodega_id_bodega`
-    FOREIGN KEY (`id_bodega`)
-    REFERENCES `Distribution`.`Bodega` (`id_Bodega`)
-    ON DELETE NO ACTION
-    ON UPDATE NO ACTION)
-ENGINE = InnoDB;
-
-CREATE INDEX `fk_bodega_id_bodega_idx` ON `Distribution`.`flota` (`id_bodega` ASC) VISIBLE;
-
-
--- -----------------------------------------------------
--- Table `Distribution`.`vehiculo`
--- -----------------------------------------------------
-DROP TABLE IF EXISTS `Distribution`.`vehiculo` ;
-
-CREATE TABLE IF NOT EXISTS `Distribution`.`vehiculo` (
-  `id_vehiculo` INT NOT NULL AUTO_INCREMENT,
-  `id_flota` INT NOT NULL,
-  `marca_vehiculo` VARCHAR(45) NULL,
-  `modelo_vehiculo` VARCHAR(45) NULL,
-  `anio_vehiculo` INT NULL,
-  `fecha_ingreso` DATE NOT NULL,
-  `fecha_salida` DATE NULL,
-  `patente_vehiculo` VARCHAR(45) NOT NULL,
-  PRIMARY KEY (`id_vehiculo`),
-  CONSTRAINT `fk_vehiculo_id_flota`
-    FOREIGN KEY (`id_flota`)
-    REFERENCES `Distribution`.`flota` (`id_flota`)
-    ON DELETE NO ACTION
-    ON UPDATE NO ACTION)
-ENGINE = InnoDB;
-
-CREATE UNIQUE INDEX `patente_vehiculo_UNIQUE` ON `Distribution`.`vehiculo` (`patente_vehiculo` ASC) VISIBLE;
-
-CREATE INDEX `fk_vehiculo_id_flota_idx` ON `Distribution`.`vehiculo` (`id_flota` ASC) VISIBLE;
-
+SET @OLD_SQL_MODE=@@SQL_MODE, SQL_MODE='STRICT_TRANS_TABLES,NO_ENGINE_SUBSTITUTION';
+
+DROP SCHEMA IF EXISTS `distribution`;
+CREATE SCHEMA IF NOT EXISTS `distribution` DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_0900_ai_ci;
+USE `distribution`;
+
+-- =========================
+-- CATÁLOGO GEO (sin soft delete)
+-- =========================
+CREATE TABLE region (
+  id_region INT AUTO_INCREMENT PRIMARY KEY,
+  nombre_region VARCHAR(45) NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE comuna (
+  id_comuna INT AUTO_INCREMENT PRIMARY KEY,
+  id_region INT NOT NULL,
+  nombre_comuna VARCHAR(45) NOT NULL,
+  KEY idx_comuna_id_region (id_region),
+  CONSTRAINT fk_comuna_region
+    FOREIGN KEY (id_region) REFERENCES region(id_region)
+    ON DELETE RESTRICT ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE ciudad (
+  id_ciudad INT AUTO_INCREMENT PRIMARY KEY,
+  id_comuna INT NOT NULL,
+  nombre_ciudad VARCHAR(45) NOT NULL,
+  KEY idx_ciudad_id_comuna (id_comuna),
+  CONSTRAINT fk_ciudad_comuna
+    FOREIGN KEY (id_comuna) REFERENCES comuna(id_comuna)
+    ON DELETE RESTRICT ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- =========================
+-- EMPRESA (tenant) soft delete
+-- rut_empresa NO único global (solo índice)
+-- =========================
+CREATE TABLE empresa (
+  id_empresa INT AUTO_INCREMENT PRIMARY KEY,
+  nombre_empresa VARCHAR(50) NOT NULL,
+  rut_empresa VARCHAR(12) NOT NULL,
+  calle VARCHAR(50) NOT NULL,
+  numero INT,
+  id_ciudad INT NOT NULL,
+
+  borrado TINYINT NOT NULL DEFAULT 0,
+  fecha_borrado DATETIME NULL,
+
+  KEY idx_empresa_rut (rut_empresa),
+  KEY idx_empresa_ciudad (id_ciudad),
+  KEY idx_empresa_borrado (borrado),
+
+  CONSTRAINT fk_empresa_ciudad
+    FOREIGN KEY (id_ciudad) REFERENCES ciudad(id_ciudad)
+    ON DELETE RESTRICT ON UPDATE CASCADE,
+
+  CONSTRAINT ck_empresa_softdelete
+    CHECK (
+      (borrado = 0 AND fecha_borrado IS NULL) OR
+      (borrado = 1 AND fecha_borrado IS NOT NULL)
+    )
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- =========================
+-- USUARIOS / ROLES / LOGIN
+-- =========================
+CREATE TABLE usuarios (
+  id_usuario INT AUTO_INCREMENT PRIMARY KEY,
+  nombres VARCHAR(45) NOT NULL,
+  apellido_paterno VARCHAR(45) NOT NULL,
+  apellido_materno VARCHAR(45),
+  celular VARCHAR(15) NOT NULL,
+
+  borrado TINYINT NOT NULL DEFAULT 0,
+  fecha_borrado DATETIME NULL,
+
+  celular_activo VARCHAR(15)
+    GENERATED ALWAYS AS (CASE WHEN borrado = 0 THEN celular ELSE NULL END) STORED,
+
+  UNIQUE KEY uq_usuarios_celular_activo (celular_activo),
+  KEY idx_usuarios_borrado (borrado),
+
+  CONSTRAINT ck_usuarios_softdelete
+    CHECK (
+      (borrado = 0 AND fecha_borrado IS NULL) OR
+      (borrado = 1 AND fecha_borrado IS NOT NULL)
+    )
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE roles (
+  id_rol INT AUTO_INCREMENT PRIMARY KEY,
+  nombre_rol VARCHAR(50) NOT NULL,
+  UNIQUE KEY uq_roles_nombre (nombre_rol)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE login (
+  id_login INT AUTO_INCREMENT PRIMARY KEY,
+  email VARCHAR(256) NOT NULL,
+  password VARCHAR(255) NOT NULL,
+  id_usuario INT NOT NULL,
+  id_rol INT NOT NULL,
+  verificado TINYINT NOT NULL DEFAULT 0,
+  fecha_creacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+  fecha_modificacion DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+
+  borrado TINYINT NOT NULL DEFAULT 0,
+  fecha_borrado DATETIME NULL,
+
+  email_activo VARCHAR(256)
+    GENERATED ALWAYS AS (CASE WHEN borrado = 0 THEN email ELSE NULL END) STORED,
+
+  UNIQUE KEY uq_login_email_activo (email_activo),
+  UNIQUE KEY uq_login_id_usuario (id_usuario),
+
+  KEY idx_login_rol (id_rol),
+  KEY idx_login_borrado (borrado),
+
+  CONSTRAINT fk_login_usuario
+    FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario)
+    ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT fk_login_rol
+    FOREIGN KEY (id_rol) REFERENCES roles(id_rol)
+    ON DELETE RESTRICT ON UPDATE CASCADE,
+
+  CONSTRAINT ck_login_softdelete
+    CHECK (
+      (borrado = 0 AND fecha_borrado IS NULL) OR
+      (borrado = 1 AND fecha_borrado IS NOT NULL)
+    )
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+DELIMITER $$
+CREATE TRIGGER trg_usuarios_softdelete_login
+AFTER UPDATE ON usuarios
+FOR EACH ROW
+BEGIN
+  IF (OLD.borrado = 0 AND NEW.borrado = 1) THEN
+    UPDATE login
+      SET borrado = 1,
+          fecha_borrado = COALESCE(fecha_borrado, NOW())
+    WHERE id_usuario = NEW.id_usuario AND borrado = 0;
+  END IF;
+
+  IF (OLD.borrado = 1 AND NEW.borrado = 0) THEN
+    UPDATE login
+      SET borrado = 0,
+          fecha_borrado = NULL
+    WHERE id_usuario = NEW.id_usuario AND borrado = 1;
+  END IF;
+END$$
+DELIMITER ;
+
+-- =========================
+-- EMPLEADOS (soft delete)
+-- 1 empleo activo por usuario
+-- =========================
+CREATE TABLE empleados (
+  id_empleado INT AUTO_INCREMENT PRIMARY KEY,
+  id_usuario INT NOT NULL,
+  id_empresa INT NOT NULL,
+  cargo VARCHAR(100) NOT NULL,
+
+  borrado TINYINT NOT NULL DEFAULT 0,
+  fecha_borrado DATETIME NULL,
+  borrado_por INT NULL,
+
+  id_usuario_activo INT
+    GENERATED ALWAYS AS (CASE WHEN borrado = 0 THEN id_usuario ELSE NULL END) STORED,
+
+  UNIQUE KEY uq_empleados_usuario_activo (id_usuario_activo),
+
+  KEY idx_empleados_empresa (id_empresa),
+  KEY idx_empleados_usuario (id_usuario),
+  KEY idx_empleados_borrado (borrado),
+  KEY idx_empleados_borrado_por (borrado_por),
+
+  CONSTRAINT fk_empleados_usuario
+    FOREIGN KEY (id_usuario) REFERENCES usuarios(id_usuario)
+    ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT fk_empleados_empresa
+    FOREIGN KEY (id_empresa) REFERENCES empresa(id_empresa)
+    ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT fk_empleados_borrado_por
+    FOREIGN KEY (borrado_por) REFERENCES usuarios(id_usuario)
+    ON DELETE SET NULL ON UPDATE CASCADE,
+
+  CONSTRAINT ck_empleados_softdelete
+    CHECK (
+      (borrado = 0 AND fecha_borrado IS NULL) OR
+      (borrado = 1 AND fecha_borrado IS NOT NULL)
+    )
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- =========================
+-- GIROS
+-- =========================
+CREATE TABLE lista_giros (
+  id_giro INT AUTO_INCREMENT PRIMARY KEY,
+  nombre_giro VARCHAR(256) NOT NULL,
+  codigo_giro INT,
+  UNIQUE KEY uq_lista_giros_codigo (codigo_giro)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE giros_empresa (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  id_giro INT NOT NULL,
+  id_empresa INT NOT NULL,
+  UNIQUE KEY uq_giros_empresa (id_giro, id_empresa),
+  KEY idx_giros_empresa_empresa (id_empresa),
+  CONSTRAINT fk_giros_empresa_giro
+    FOREIGN KEY (id_giro) REFERENCES lista_giros(id_giro)
+    ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT fk_giros_empresa_empresa
+    FOREIGN KEY (id_empresa) REFERENCES empresa(id_empresa)
+    ON DELETE RESTRICT ON UPDATE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- =========================
+-- CLIENTES (soft delete) UNIQUE activo por empresa+rut
+-- =========================
+CREATE TABLE clientes (
+  id_cliente INT AUTO_INCREMENT PRIMARY KEY,
+  id_empresa INT NOT NULL,
+  nombre_cliente VARCHAR(100) NOT NULL,
+  rut_cliente VARCHAR(12) NOT NULL,
+  id_giro INT NULL,
+  calle VARCHAR(50) NOT NULL,
+  numero INT,
+  id_ciudad INT NOT NULL,
+
+  borrado TINYINT NOT NULL DEFAULT 0,
+  fecha_borrado DATETIME NULL,
+
+  rut_cliente_activo VARCHAR(12)
+    GENERATED ALWAYS AS (CASE WHEN borrado = 0 THEN rut_cliente ELSE NULL END) STORED,
+
+  UNIQUE KEY uq_clientes_empresa_rut_activo (id_empresa, rut_cliente_activo),
+
+  KEY idx_clientes_empresa_borrado (id_empresa, borrado),
+  KEY idx_clientes_ciudad (id_ciudad),
+  KEY idx_clientes_giro (id_giro),
+
+  CONSTRAINT fk_clientes_empresa
+    FOREIGN KEY (id_empresa) REFERENCES empresa(id_empresa)
+    ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT fk_clientes_giro
+    FOREIGN KEY (id_giro) REFERENCES lista_giros(id_giro)
+    ON DELETE SET NULL ON UPDATE CASCADE,
+  CONSTRAINT fk_clientes_ciudad
+    FOREIGN KEY (id_ciudad) REFERENCES ciudad(id_ciudad)
+    ON DELETE RESTRICT ON UPDATE CASCADE,
+
+  CONSTRAINT ck_clientes_softdelete
+    CHECK (
+      (borrado = 0 AND fecha_borrado IS NULL) OR
+      (borrado = 1 AND fecha_borrado IS NOT NULL)
+    )
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- =========================
+-- BODEGA (soft delete)
+-- Multi-tenant: UNIQUE (id_empresa,id_bodega) para FK compuesta
+-- =========================
+CREATE TABLE bodega (
+  id_bodega INT AUTO_INCREMENT PRIMARY KEY,
+  id_empresa INT NOT NULL,
+  nombre_bodega VARCHAR(45) NOT NULL,
+  calle VARCHAR(45) NOT NULL,
+  numero INT,
+  id_ciudad INT NOT NULL,
+
+  borrado TINYINT NOT NULL DEFAULT 0,
+  fecha_borrado DATETIME NULL,
+
+  nombre_bodega_activo VARCHAR(45)
+    GENERATED ALWAYS AS (CASE WHEN borrado = 0 THEN nombre_bodega ELSE NULL END) STORED,
+
+  UNIQUE KEY uq_bodega_empresa_id (id_empresa, id_bodega),
+  UNIQUE KEY uq_bodega_empresa_nombre_activo (id_empresa, nombre_bodega_activo),
+
+  KEY idx_bodega_empresa_borrado (id_empresa, borrado),
+  KEY idx_bodega_ciudad (id_ciudad),
+
+  CONSTRAINT fk_bodega_empresa
+    FOREIGN KEY (id_empresa) REFERENCES empresa(id_empresa)
+    ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT fk_bodega_ciudad
+    FOREIGN KEY (id_ciudad) REFERENCES ciudad(id_ciudad)
+    ON DELETE RESTRICT ON UPDATE CASCADE,
+
+  CONSTRAINT ck_bodega_softdelete
+    CHECK (
+      (borrado = 0 AND fecha_borrado IS NULL) OR
+      (borrado = 1 AND fecha_borrado IS NOT NULL)
+    )
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- =========================
+-- PROVEEDORES (soft delete)
+-- =========================
+CREATE TABLE proveedores (
+  id_proveedor INT AUTO_INCREMENT PRIMARY KEY,
+  id_empresa INT NOT NULL,
+  rut_proveedor VARCHAR(12) NOT NULL,
+  nombre_proveedor VARCHAR(45) NOT NULL,
+  nombre_vendedor VARCHAR(45),
+  telefono_vendedor VARCHAR(15),
+  telefono_fijo VARCHAR(15),
+  email_vendedor VARCHAR(256),
+
+  borrado TINYINT NOT NULL DEFAULT 0,
+  fecha_borrado DATETIME NULL,
+
+  rut_proveedor_activo VARCHAR(12)
+    GENERATED ALWAYS AS (CASE WHEN borrado = 0 THEN rut_proveedor ELSE NULL END) STORED,
+
+  UNIQUE KEY uq_proveedores_empresa_id (id_empresa, id_proveedor),
+  UNIQUE KEY uq_proveedores_empresa_rut_activo (id_empresa, rut_proveedor_activo),
+
+  KEY idx_proveedores_empresa_borrado (id_empresa, borrado),
+
+  CONSTRAINT fk_proveedores_empresa
+    FOREIGN KEY (id_empresa) REFERENCES empresa(id_empresa)
+    ON DELETE RESTRICT ON UPDATE CASCADE,
+
+  CONSTRAINT ck_proveedores_softdelete
+    CHECK (
+      (borrado = 0 AND fecha_borrado IS NULL) OR
+      (borrado = 1 AND fecha_borrado IS NOT NULL)
+    )
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- =========================
+-- PRODUCTO (soft delete)
+-- =========================
+CREATE TABLE producto (
+  id_producto INT AUTO_INCREMENT PRIMARY KEY,
+  id_empresa INT NOT NULL,
+  nombre_producto VARCHAR(45) NOT NULL,
+
+  borrado TINYINT NOT NULL DEFAULT 0,
+  fecha_borrado DATETIME NULL,
+
+  UNIQUE KEY uq_producto_empresa_id (id_empresa, id_producto),
+  KEY idx_producto_empresa_borrado (id_empresa, borrado),
+
+  CONSTRAINT fk_producto_empresa
+    FOREIGN KEY (id_empresa) REFERENCES empresa(id_empresa)
+    ON DELETE RESTRICT ON UPDATE CASCADE,
+
+  CONSTRAINT ck_producto_softdelete
+    CHECK (
+      (borrado = 0 AND fecha_borrado IS NULL) OR
+      (borrado = 1 AND fecha_borrado IS NOT NULL)
+    )
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- =========================
+-- PRODUCTO <-> PROVEEDOR (soft delete) + FKs compuestas
+-- =========================
+CREATE TABLE producto_proveedor (
+  id INT AUTO_INCREMENT PRIMARY KEY,
+  id_empresa INT NOT NULL,
+  id_producto INT NOT NULL,
+  id_proveedor INT NOT NULL,
+
+  borrado TINYINT NOT NULL DEFAULT 0,
+  fecha_borrado DATETIME NULL,
+
+  id_producto_activo INT
+    GENERATED ALWAYS AS (CASE WHEN borrado = 0 THEN id_producto ELSE NULL END) STORED,
+  id_proveedor_activo INT
+    GENERATED ALWAYS AS (CASE WHEN borrado = 0 THEN id_proveedor ELSE NULL END) STORED,
+
+  UNIQUE KEY uq_pp_activo (id_empresa, id_producto_activo, id_proveedor_activo),
+
+  KEY idx_pp_empresa_producto (id_empresa, id_producto),
+  KEY idx_pp_empresa_proveedor (id_empresa, id_proveedor),
+  KEY idx_pp_empresa_borrado (id_empresa, borrado),
+
+  CONSTRAINT fk_pp_producto
+    FOREIGN KEY (id_empresa, id_producto)
+    REFERENCES producto(id_empresa, id_producto)
+    ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT fk_pp_proveedor
+    FOREIGN KEY (id_empresa, id_proveedor)
+    REFERENCES proveedores(id_empresa, id_proveedor)
+    ON DELETE RESTRICT ON UPDATE CASCADE,
+
+  CONSTRAINT ck_pp_softdelete
+    CHECK (
+      (borrado = 0 AND fecha_borrado IS NULL) OR
+      (borrado = 1 AND fecha_borrado IS NOT NULL)
+    )
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- =========================
+-- INVENTARIO (soft delete) + FKs compuestas
+-- =========================
+CREATE TABLE inventario (
+  id_inventario INT AUTO_INCREMENT PRIMARY KEY,
+  id_empresa INT NOT NULL,
+  id_bodega INT NOT NULL,
+  id_producto INT NOT NULL,
+  stock INT UNSIGNED NOT NULL DEFAULT 0,
+
+  borrado TINYINT NOT NULL DEFAULT 0,
+  fecha_borrado DATETIME NULL,
+
+  id_bodega_activo INT
+    GENERATED ALWAYS AS (CASE WHEN borrado = 0 THEN id_bodega ELSE NULL END) STORED,
+  id_producto_activo INT
+    GENERATED ALWAYS AS (CASE WHEN borrado = 0 THEN id_producto ELSE NULL END) STORED,
+
+  UNIQUE KEY uq_inv_activo (id_empresa, id_bodega_activo, id_producto_activo),
+
+  KEY idx_inv_empresa_borrado (id_empresa, borrado),
+  KEY idx_inv_empresa_bodega (id_empresa, id_bodega),
+  KEY idx_inv_empresa_producto (id_empresa, id_producto),
+
+  CONSTRAINT fk_inv_bodega
+    FOREIGN KEY (id_empresa, id_bodega)
+    REFERENCES bodega(id_empresa, id_bodega)
+    ON DELETE RESTRICT ON UPDATE CASCADE,
+  CONSTRAINT fk_inv_producto
+    FOREIGN KEY (id_empresa, id_producto)
+    REFERENCES producto(id_empresa, id_producto)
+    ON DELETE RESTRICT ON UPDATE CASCADE,
+
+  CONSTRAINT ck_inv_softdelete
+    CHECK (
+      (borrado = 0 AND fecha_borrado IS NULL) OR
+      (borrado = 1 AND fecha_borrado IS NOT NULL)
+    )
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+-- =========================
+-- FLOTA / VEHICULO (soft delete) + FKs compuestas
+-- =========================
+CREATE TABLE flota (
+  id_flota INT AUTO_INCREMENT PRIMARY KEY,
+  id_empresa INT NOT NULL,
+  nombre_flota VARCHAR(45) NOT NULL,
+  id_bodega INT NOT NULL,
+
+  borrado TINYINT NOT NULL DEFAULT 0,
+  fecha_borrado DATETIME NULL,
+
+  UNIQUE KEY uq_flota_empresa_id (id_empresa, id_flota),
+
+  KEY idx_flota_empresa_borrado (id_empresa, borrado),
+  KEY idx_flota_empresa_bodega (id_empresa, id_bodega),
+
+  CONSTRAINT fk_flota_bodega
+    FOREIGN KEY (id_empresa, id_bodega)
+    REFERENCES bodega(id_empresa, id_bodega)
+    ON DELETE RESTRICT ON UPDATE CASCADE,
+
+  CONSTRAINT ck_flota_softdelete
+    CHECK (
+      (borrado = 0 AND fecha_borrado IS NULL) OR
+      (borrado = 1 AND fecha_borrado IS NOT NULL)
+    )
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE vehiculo (
+  id_vehiculo INT AUTO_INCREMENT PRIMARY KEY,
+  id_empresa INT NOT NULL,
+  id_flota INT NOT NULL,
+
+  marca VARCHAR(45) NOT NULL,
+  modelo VARCHAR(45) NOT NULL,
+  anio SMALLINT NOT NULL,
+
+  fecha_ingreso DATE NOT NULL,
+  fecha_salida DATE NULL,
+
+  patente VARCHAR(10) NOT NULL,
+
+  borrado TINYINT NOT NULL DEFAULT 0,
+  fecha_borrado DATETIME NULL,
+
+  patente_activo VARCHAR(10)
+    GENERATED ALWAYS AS (CASE WHEN borrado = 0 THEN patente ELSE NULL END) STORED,
+
+  UNIQUE KEY uq_vehiculo_empresa_patente_activo (id_empresa, patente_activo),
+
+  KEY idx_vehiculo_empresa_borrado (id_empresa, borrado),
+  KEY idx_vehiculo_empresa_flota (id_empresa, id_flota),
+
+  CONSTRAINT fk_vehiculo_flota
+    FOREIGN KEY (id_empresa, id_flota)
+    REFERENCES flota(id_empresa, id_flota)
+    ON DELETE RESTRICT ON UPDATE CASCADE,
+
+  CONSTRAINT ck_vehiculo_anio
+    CHECK (anio BETWEEN 1900 AND 2100),
+  CONSTRAINT ck_vehiculo_fechas
+    CHECK (fecha_salida IS NULL OR fecha_salida >= fecha_ingreso),
+  CONSTRAINT ck_vehiculo_softdelete
+    CHECK (
+      (borrado = 0 AND fecha_borrado IS NULL) OR
+      (borrado = 1 AND fecha_borrado IS NOT NULL)
+    )
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 SET SQL_MODE=@OLD_SQL_MODE;
 SET FOREIGN_KEY_CHECKS=@OLD_FOREIGN_KEY_CHECKS;
