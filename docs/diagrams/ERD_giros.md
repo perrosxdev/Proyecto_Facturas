@@ -30,4 +30,4 @@ clientes }o--|| lista_giros : "tiene giro"
 - Un **giro** representa una actividad económica.
 - Una **empresa** puede tener varios giros y un **cliente** está asociado a uno.
 
-[⬅️ Flota y Vehículos](./ERD_flota_vehiculo.md)   [⬆️ Índice](./../../Base de datos/README.md)
+[⬅️ Flota y Vehículos](./ERD_flota_vehiculo.md)   [⬆️ Índice](./../../Base%20de%20datos/README.md)
