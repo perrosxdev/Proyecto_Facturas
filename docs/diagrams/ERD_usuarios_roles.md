@@ -39,3 +39,5 @@ roles ||--o{ login : "define rol de acceso"
 
 - Un **usuario** puede ser **empleado de una empresa** y/o **tener acceso de login**.
 - La tabla **login** define credenciales y se relaciona también con los **roles de acceso**.
+
+[⬅️ Empresas y Recursos](./ERD_empresas_recursos.md)   [⬆️ Índice](../../Base de datos/README.md)   [➡️ Operaciones y Stock](./ERD_operaciones_stock.md)

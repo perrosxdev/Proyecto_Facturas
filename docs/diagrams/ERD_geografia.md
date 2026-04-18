@@ -29,3 +29,5 @@ comuna ||--o{ ciudad : "incluye"
 ```
 - **region incluye comunas:** Una región puede tener muchas comunas.
 - **comuna incluye ciudades:** Una comuna puede tener muchas ciudades.
+
+[⬆️ Índice](../../Base de datos/README.md)   [➡️ Empresas y Recursos](./ERD_empresas_recursos.md)

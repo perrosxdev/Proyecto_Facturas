@@ -55,3 +55,5 @@ bodega ||--o{ flota : "alberga flota"
 **Explicación:**
 - Una **empresa** puede **poseer varias bodegas**, **administrar flotas**, **fabricar productos** y **proveer servicios a clientes**.
 - Una **bodega** está asociada a una empresa y puede **albergar flotas**.
+
+[⬅️ Geografía](./ERD_geografia.md)   [⬆️ Índice](../../Base de datos/README.md)   [➡️ Usuarios, Login y Roles](./ERD_usuarios_roles.md)
