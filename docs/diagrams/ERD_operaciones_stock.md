@@ -47,4 +47,4 @@ producto ||--o{ inventario : "cuenta stock en"
 - Un **producto** puede tener varios **proveedores** y almacenarse en diferentes **bodegas**.
 - El **inventario** vincula productos y bodegas para saber dónde y cuánto hay.
 
-[⬅️ Usuarios, Login y Roles](./ERD_usuarios_roles.md)   [⬆️ Índice](../../Base de datos/README.md)   [➡️ Flota y Vehículos](./ERD_flota_vehiculo.md)
+[⬅️ Usuarios, Login y Roles](./ERD_usuarios_roles.md)   [⬆️ Índice](./../../Base de datos/README.md)   [➡️ Flota y Vehículos](./ERD_flota_vehiculo.md)
