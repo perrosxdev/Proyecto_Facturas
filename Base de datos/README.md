@@ -9,22 +9,22 @@ La simbología empleada es la estándar de [Mermaid ERD](https://mermaid.js.org/
 
 ### Índice de módulos
 
-1. [🌍 Geografía](./ERD_geografia.md)  
+1. [🌍 Geografía](../docs/diagrams/ERD_geografia.md)  
     Tablas para regiones, comunas y ciudades, base para ubicaciones.
 
-2. [🏢 Empresas y Recursos](./ERD_empresas_recursos.md)  
+2. [🏢 Empresas y Recursos](../docs/diagrams/ERD_empresas_recursos.md)  
     Cómo una empresa se relaciona con clientes, bodegas, productos, proveedores y flotas.
 
-3. [👥 Usuarios, Login y Roles](./ERD_usuarios_roles.md)  
+3. [👥 Usuarios, Login y Roles](../docs/diagrams/ERD_usuarios_roles.md)  
     Gestión de usuarios, acceso, roles y relaciones laborales.
 
-4. [📦 Operaciones y Stock](./ERD_operaciones_stock.md)  
+4. [📦 Operaciones y Stock](../docs/diagrams/ERD_operaciones_stock.md)  
     Cómo se maneja el inventario, los proveedores y el flujo de productos.
 
-5. [🚚 Flota y Vehículos](./ERD_flota_vehiculo.md)  
+5. [🚚 Flota y Vehículos](../docs/diagrams/ERD_flota_vehiculo.md)  
     Estructura de la gestión de flotas y sus vehículos.
 
-6. [🔄 Giros y Relaciones](./ERD_giros.md)  
+6. [🔄 Giros y Relaciones](../docs/diagrams/ERD_giros.md)  
     Organización de los giros comerciales y su vínculo con empresas/clientes.
 
 ---
