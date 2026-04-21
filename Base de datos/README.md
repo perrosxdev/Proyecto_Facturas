@@ -3,6 +3,12 @@
 Bienvenido/a al visualizador de la arquitectura de datos de este sistema.  
 Aquí encontrarás el modelo relacional dividido en módulos lógicos para facilitar la comprensión y mantención.
 
+## Diagrama completo (DBdiagram)
+
+[Visualizar Diagrama ER ](https://dbdiagram.io/d/Facturin-Diagram-69e2e7520aa78f6bc1026567)
+
+## Diagrama por modulos (Mermaid)
+
 La simbología empleada es la estándar de [Mermaid ERD](https://mermaid.js.org/syntax/entity-relationship-diagram.html), que GitHub renderiza automáticamente en los `.md` compatibles.
 
 ---
