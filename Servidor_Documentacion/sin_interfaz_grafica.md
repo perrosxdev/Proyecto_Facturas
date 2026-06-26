@@ -1,5 +1,3 @@
----
-
 ## Trabajar en el Servidor sin Interfaz Gráfica
 
 Ubuntu Server no tiene escritorio — todo se hace desde la terminal vía SSH. Esto es lo estándar en servidores y tiene ventajas concretas: menos consumo de RAM, menos superficie de ataque y mayor estabilidad.
