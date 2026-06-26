@@ -22,75 +22,84 @@
 
 ---
 
-## Procesadores Recomendados
+## Procesadores Recomendados — Plataforma AMD AM5
+
+> **¿Por qué solo AM5?**
+> AM5 es la plataforma más actual de AMD y AMD ha confirmado soporte hasta al menos 2027.
+> Esto significa que puedes comprar la **placa madre una sola vez** y simplemente cambiar
+> el procesador al pasar de Fase 1 a Fase 2, sin tocar nada más del servidor.
+> Es la decisión más inteligente económicamente para un servidor que va a crecer.
 
 ### Fase 1 (1–5 empresas, 40–50 usuarios)
 
-| Procesador | Núcleos/Hilos | Comentarios |
-|------------|--------------|-------------|
-| AMD Ryzen 7 5700X | 8 / 16 | Excelente relación precio/rendimiento. |
-| AMD Ryzen 7 7700 | 8 / 16 | Mayor eficiencia y plataforma moderna. |
-| Intel Core i5-14500 | 14 núcleos / 20 hilos | Muy buen rendimiento multitarea. |
-| Intel Core i7-12700 | 12 núcleos / 20 hilos | Excelente para múltiples contenedores. |
+| Procesador | Núcleos/Hilos | TDP | Comentarios |
+|------------|--------------|-----|-------------|
+| AMD Ryzen 7 7700 | 8 / 16 | 65 W | Punto de entrada ideal. Bajo consumo, excelente rendimiento para contenedores. |
+| AMD Ryzen 7 7700X | 8 / 16 | 105 W | Más frecuencia que el 7700, útil si hay picos de carga frecuentes. |
+| AMD Ryzen 7 9700X | 8 / 16 | 65 W | Generación Zen 5. Mejor IPC y eficiencia que el 7700X al mismo consumo. **Mejor opción Fase 1.** |
 
 ### Fase 2 (10–30 empresas, 100–200 usuarios)
 
-| Procesador | Núcleos/Hilos | Comentarios |
-|------------|--------------|-------------|
-| AMD Ryzen 9 7900 | 12 / 24 | Muy recomendado para crecimiento a largo plazo. |
-| AMD Ryzen 9 9900 | 12 / 24 | Excelente eficiencia y rendimiento. |
-| Intel Core i7-14700 | 20 núcleos / 28 hilos | Gran capacidad de multitarea. |
-| Intel Core i9-14900 | 24 núcleos / 32 hilos | Pensado para cargas elevadas y expansión futura. |
+| Procesador | Núcleos/Hilos | TDP | Comentarios |
+|------------|--------------|-----|-------------|
+| AMD Ryzen 9 7900 | 12 / 24 | 65 W | Buen salto de núcleos manteniendo bajo consumo. |
+| AMD Ryzen 9 7900X | 12 / 24 | 170 W | Mayor frecuencia, pero consume más. Requiere buena refrigeración. |
+| AMD Ryzen 9 9900X | 12 / 24 | 120 W | Zen 5, mejor rendimiento por vatio que el 7900X. **Mejor opción Fase 2.** |
+| AMD Ryzen 9 9950X | 16 / 32 | 170 W | Para crecimiento agresivo o si se agregan modelos ML locales. |
+
+### Ruta de Upgrade Recomendada
+
+
+
+> Ambos procesadores usan el mismo socket AM5 y la misma placa B650.
+> El upgrade de Fase 1 a Fase 2 es literalmente: apagar servidor, cambiar CPU, encender.
 
 ---
 
-## Placas Madre Recomendadas
+## Placas Madre Recomendadas — AMD AM5 (Chipset B650)
 
-### Plataforma AMD AM4 (Ryzen 5000)
+> Se recomienda el chipset **B650** sobre el X670 porque ofrece el mismo soporte
+> de funcionalidades necesarias para un servidor a menor costo. El X670 agrega
+> características orientadas a overclocking que no son relevantes en producción.
 
-- Chipset B550.
-- Soporte para SSD NVMe PCIe 4.0.
-- Hasta 128 GB de RAM.
-- Ejemplos:
-  - ASUS TUF Gaming B550-PLUS
-  - MSI MAG B550 Tomahawk
-  - Gigabyte B550 AORUS Elite
+| Placa | Slots RAM | PCIe NVMe | Comentarios |
+|-------|-----------|-----------|-------------|
+| **MSI MAG B650 Tomahawk WiFi** | 4 × DDR5 (hasta 192 GB) | 2 × M.2 PCIe 4.0 | La más recomendada. Buena calidad de VRM para uso 24/7, amplio soporte de drivers en Linux. |
+| **ASUS TUF Gaming B650-PLUS** | 4 × DDR5 (hasta 192 GB) | 2 × M.2 PCIe 4.0 | Muy buena alternativa. ASUS tiene historial sólido de estabilidad en Linux. |
+| **Gigabyte B650 AORUS Elite AX** | 4 × DDR5 (hasta 192 GB) | 2 × M.2 PCIe 4.0 | Opción válida si las anteriores no están disponibles en tu región. |
 
-### Plataforma AMD AM5 (Ryzen 7000/9000)
-
-- Chipset B650.
-- Soporte DDR5.
-- Mayor vida útil de la plataforma.
-- Ejemplos:
-  - MSI B650 Tomahawk WiFi
-  - ASUS TUF Gaming B650-PLUS
-  - Gigabyte B650 AORUS Elite AX
-
-### Plataforma Intel LGA1700
-
-- Chipset B760.
-- Compatible con i5/i7/i9 de 12ª a 14ª generación.
-- Ejemplos:
-  - MSI PRO B760-P
-  - ASUS TUF B760-PLUS
-  - Gigabyte B760 AORUS Elite
+**Lo que importa verificar en cualquier placa AM5 para servidor:**
+- Mínimo 4 slots DDR5 (para poder ampliar RAM en el futuro sin reemplazar módulos)
+- Mínimo 2 puertos M.2 NVMe (disco principal + disco de respaldo)
+- VRM de calidad (la placa va a estar encendida 24/7 durante años)
+- Buen soporte de Linux (evitar placas muy nuevas con drivers inestables)
 
 ---
 
-## Memoria RAM Recomendada
+## Memoria RAM Recomendada — DDR5 (AM5)
 
 ### Fase 1
 
-- 32 GB (2×16 GB)
-- DDR4-3200 (AM4)
-- DDR5-5600 (AM5 o Intel)
+- **32 GB (2 × 16 GB) DDR5-5600**
+- Instalar en 2 de los 4 slots (modo dual channel)
+- Dejar los otros 2 slots libres para la ampliación de Fase 2
 
 ### Fase 2
 
-- 64 GB (2×32 GB)
-- DDR5-5600 o superior.
+- Agregar **2 × 32 GB DDR5-5600** en los slots libres → total 96 GB
+- O reemplazar por **4 × 32 GB** → total 128 GB si se necesita más
 
-> Se recomienda dejar dos ranuras libres para futuras ampliaciones.
+**Kits recomendados:**
+
+| Kit | Capacidad | Velocidad | Comentarios |
+|-----|-----------|-----------|-------------|
+| Kingston Fury Beast DDR5 | 2 × 16 GB | 5600 MT/s | Buena compatibilidad con AM5, precio accesible. |
+| Corsair Vengeance DDR5 | 2 × 16 GB | 5600 MT/s | Muy estable, amplio soporte en Linux. |
+| G.Skill Ripjaws S5 DDR5 | 2 × 16 GB | 5600 MT/s | Excelente relación precio/calidad. |
+
+> **Importante:** En AM5 con Ryzen 7000/9000, la velocidad nativa del controlador de memoria
+> es 5600 MT/s. No vale la pena pagar más por kits de 6000+ MT/s para un servidor —
+> la diferencia de rendimiento en cargas de base de datos y contenedores es insignificante.
 
 ---
 
@@ -170,9 +179,9 @@ Actualmente, para Thoth, una GPU dedicada no aporta beneficios.
 
 | Componente | Recomendación |
 |-----------|---------------|
-| CPU | AMD Ryzen 7 5700X |
-| Placa | MSI B550 Tomahawk |
-| RAM | 32 GB DDR4 |
+| CPU | AMD Ryzen 7 9700X |
+| Placa | MSI MAG B650 Tomahawk WiFi |
+| RAM | 32 GB DDR5-5600 (2 × 16 GB, 2 slots libres) |
 | SSD principal | 1 TB NVMe PCIe 4.0 |
 | Disco respaldo | 1 TB SSD |
 | Fuente | 650 W 80+ Bronze |
@@ -185,9 +194,9 @@ Actualmente, para Thoth, una GPU dedicada no aporta beneficios.
 
 | Componente | Recomendación |
 |-----------|---------------|
-| CPU | AMD Ryzen 9 7900 |
-| Placa | MSI B650 Tomahawk |
-| RAM | 64 GB DDR5 |
+| CPU | AMD Ryzen 9 9900X |
+| Placa | MSI MAG B650 Tomahawk WiFi (misma placa) |
+| RAM | 96 GB DDR5-5600 (agregar 2 × 32 GB) |
 | SSD principal | 2 TB NVMe |
 | Disco respaldo | 1 TB SSD |
 | Fuente | 750 W 80+ Gold |
@@ -581,6 +590,219 @@ docker ps
 # Ver uso de recursos por contenedor
 docker stats
 ```
+
+---
+
+---
+
+## Trabajar en el Servidor Sin Interfaz Gráfica
+
+Un servidor Ubuntu sin escritorio se administra completamente desde la terminal vía **SSH**. No hay ventanas, no hay mouse — solo comandos de texto. Esto puede parecer intimidante al principio, pero en la práctica el día a día se reduce a una docena de comandos que se memorizan rápido.
+
+---
+
+### Conectarse al Servidor (SSH)
+
+Desde tu computador personal (Windows, Mac o Linux):
+
+```bash
+# Conectarse al servidor
+ssh usuario@ip-del-servidor
+
+# Si usas clave SSH (configurado en el Paso 3)
+ssh -i ~/.ssh/id_ed25519 usuario@ip-del-servidor
+
+# Ejemplo real
+ssh -i ~/.ssh/thoth-server carlos@192.168.1.100
+```
+
+Una vez conectado, verás algo así:
+```
+carlos@thoth-server:~$
+```
+Eso significa que estás dentro del servidor. Todo lo que escribas se ejecuta ahí.
+
+---
+
+### Navegar el Servidor — Comandos Básicos
+
+```bash
+# ¿Dónde estoy?
+pwd
+
+# Ver archivos y carpetas del directorio actual
+ls -la
+
+# Entrar a una carpeta
+cd /opt/thoth/app
+
+# Volver atrás
+cd ..
+
+# Ver el contenido de un archivo
+cat archivo.txt
+
+# Ver un archivo largo página por página (q para salir)
+less archivo.txt
+
+# Editar un archivo de texto
+nano archivo.txt
+# Ctrl+O para guardar · Ctrl+X para salir
+
+# Buscar texto dentro de archivos
+grep -r "texto a buscar" /opt/thoth/
+
+# Ver cuánto espacio queda en disco
+df -h
+
+# Ver uso de RAM y CPU en tiempo real
+htop
+# q para salir
+```
+
+---
+
+### Administrar Docker desde la Terminal
+
+```bash
+# Ver todos los contenedores corriendo
+docker ps
+
+# Ver logs de un contenedor en tiempo real
+docker compose logs -f api-node
+
+# Reiniciar un contenedor
+docker compose restart api-node
+
+# Parar todos los contenedores
+docker compose down
+
+# Levantar todos los contenedores
+docker compose up -d
+
+# Reconstruir y redesplegar (después de actualizar código)
+docker compose up -d --build
+
+# Ver cuántos recursos consume cada contenedor
+docker stats
+
+# Entrar dentro de un contenedor
+docker exec -it thoth-postgresql bash
+```
+
+---
+
+### Opción Recomendada — VS Code con Remote-SSH
+
+La forma más cómoda de trabajar en un servidor sin interfaz gráfica es **VS Code + extensión Remote-SSH**. Esto te da:
+
+- Explorador visual de archivos del servidor
+- Editor de texto con sintaxis resaltada
+- Terminal SSH integrada
+- Sin instalar nada extra en el servidor
+
+**Instalación:**
+
+1. Instalar [VS Code](https://code.visualstudio.com/) en tu computador personal
+2. Instalar la extensión **Remote - SSH** (id: `ms-vscode-remote.remote-ssh`)
+3. `Ctrl+Shift+P` → `Remote-SSH: Connect to Host`
+4. Ingresar `usuario@ip-del-servidor`
+5. VS Code se conecta — trabajas como si fuera tu máquina local
+
+```
+Tu computador personal
+VS Code + Remote-SSH
+        │
+        │ SSH
+        ▼
+Servidor Thoth (/opt/thoth/app/)
+```
+
+> Esta es la herramienta que vas a usar el 90% del tiempo para editar configuraciones, revisar logs y trabajar con el código.
+
+---
+
+### Opción Alternativa — Panel Web con Portainer
+
+Si prefieres administrar Docker desde un navegador, **Portainer** es un panel web gratuito:
+
+```bash
+docker volume create portainer_data
+
+docker run -d \
+  -p 9443:9443 \
+  --name portainer \
+  --restart=unless-stopped \
+  -v /var/run/docker.sock:/var/run/docker.sock \
+  -v portainer_data:/data \
+  portainer/portainer-ce:latest
+```
+
+Abrir en el navegador: `https://ip-del-servidor:9443`
+
+Desde Portainer puedes ver el estado de contenedores, logs y volúmenes con interfaz visual sin escribir comandos.
+
+> Solo accesible desde tu red local — no exponer a internet.
+
+---
+
+### Mantener Sesiones Activas — tmux
+
+Cuando trabajas por SSH y se cae la conexión o cierras la terminal, los procesos que estabas corriendo se detienen. **tmux** mantiene las sesiones activas aunque te desconectes:
+
+```bash
+# Instalar
+sudo apt install -y tmux
+
+# Crear una nueva sesión con nombre
+tmux new -s thoth
+
+# Volver a conectar a la sesión si te desconectaste
+tmux attach -t thoth
+
+# Ver sesiones activas
+tmux ls
+
+# Salir de tmux sin detenerlo (deja todo corriendo)
+# Presionar: Ctrl+B, luego D
+```
+
+---
+
+### Monitoreo Rápido
+
+```bash
+# CPU, RAM y procesos (como el administrador de tareas)
+htop
+
+# Qué proceso está usando más disco
+iotop
+
+# Tráfico de red por proceso
+sudo nethogs
+
+# Tamaño de carpetas
+ncdu /opt/thoth
+
+# Logs del sistema en tiempo real
+sudo journalctl -f
+
+# Últimas líneas del log de Nginx
+sudo tail -f /var/log/nginx/error.log
+```
+
+---
+
+### Resumen — Qué Herramienta Usar para Qué
+
+| Tarea | Herramienta |
+|-------|-------------|
+| Editar código y archivos de config | VS Code + Remote-SSH |
+| Ver estado de contenedores | `docker ps` o Portainer |
+| Ver logs de la aplicación | `docker compose logs -f` |
+| Monitorear CPU/RAM | `htop` |
+| Correr comandos sin perder la sesión | tmux |
+| Administración visual de Docker | Portainer (navegador) |
 
 ---
 
