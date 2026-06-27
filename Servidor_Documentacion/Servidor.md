@@ -25,34 +25,42 @@
 ## Procesadores Recomendados — Plataforma AMD AM5
 
 > **¿Por qué solo AM5?**
-> AM5 es la plataforma más actual de AMD y AMD ha confirmado soporte hasta al menos 2027.
-> Esto significa que puedes comprar la **placa madre una sola vez** y simplemente cambiar
-> el procesador al pasar de Fase 1 a Fase 2, sin tocar nada más del servidor.
-> Es la decisión más inteligente económicamente para un servidor que va a crecer.
+> AM5 es la plataforma más actual de AMD con soporte confirmado hasta al menos 2027.
+> Puedes comprar la **placa madre una sola vez** y cambiar solo el procesador si necesitas escalar.
+> Todos los procesadores listados aquí son compatibles con las placas B650 recomendadas.
 
 ### Fase 1 (1–5 empresas, 40–50 usuarios)
 
-| Procesador | Núcleos/Hilos | TDP | Comentarios |
-|------------|--------------|-----|-------------|
-| AMD Ryzen 7 7700 | 8 / 16 | 65 W | Punto de entrada ideal. Bajo consumo, excelente rendimiento para contenedores. |
-| AMD Ryzen 7 7700X | 8 / 16 | 105 W | Más frecuencia que el 7700, útil si hay picos de carga frecuentes. |
-| AMD Ryzen 7 9700X | 8 / 16 | 65 W | Generación Zen 5. Mejor IPC y eficiencia que el 7700X al mismo consumo. **Mejor opción Fase 1.** |
+| Procesador | Núcleos/Hilos | TDP | iGPU | Comentarios |
+|------------|--------------|-----|------|-------------|
+| AMD Ryzen 5 8600G | 6 / 12 | 65 W | Radeon 760M | Opción económica. Suficiente para Fase 1 con pocos tenants. |
+| AMD Ryzen 7 8700G | 8 / 16 | 65 W | Radeon 780M | **Mejor opción Fase 1 y Fase 2.** Tope de gama con iGPU en AM5. Entrega señal HDMI/DP directo desde la placa sin necesitar GPU dedicada. |
+| AMD Ryzen 7 9700G | 8 / 16 | 65 W | Radeon 860M | Zen 5 — anunciado en CES 2026. Más eficiencia que el 8700G, compatible con placa B650. La iGPU (860M, 8 CUs) tiene menos CUs que el 8700G en papel pero arquitectura RDNA 3.5 más moderna. Evaluar disponibilidad y precio al momento de comprar. |
 
 ### Fase 2 (10–30 empresas, 100–200 usuarios)
 
-| Procesador | Núcleos/Hilos | TDP | Comentarios |
-|------------|--------------|-----|-------------|
-| AMD Ryzen 9 7900 | 12 / 24 | 65 W | Buen salto de núcleos manteniendo bajo consumo. |
-| AMD Ryzen 9 7900X | 12 / 24 | 170 W | Mayor frecuencia, pero consume más. Requiere buena refrigeración. |
-| AMD Ryzen 9 9900X | 12 / 24 | 120 W | Zen 5, mejor rendimiento por vatio que el 7900X. **Mejor opción Fase 2.** |
-| AMD Ryzen 9 9950X | 16 / 32 | 170 W | Para crecimiento agresivo o si se agregan modelos ML locales. |
+| Procesador | Núcleos/Hilos | TDP | iGPU | Comentarios |
+|------------|--------------|-----|------|-------------|
+| AMD Ryzen 7 8700G | 8 / 16 | 65 W | Radeon 780M | **Opción recomendada si quieres evitar GPU dedicada.** Para un ERP con 100–200 usuarios, el cuello de botella será la RAM y el disco — no los cores. Mantenerlo es perfectamente válido. |
+| AMD Ryzen 7 9700G | 8 / 16 | 65 W | Radeon 860M | Zen 5, anunciado CES 2026. Upgrade natural desde el 8700G si está disponible. Misma placa, sin GPU dedicada. |
+| AMD Ryzen 9 9900X | 12 / 24 | 120 W | ❌ No tiene | Para crecimiento muy agresivo (+30 empresas) o si se suman modelos ML locales. Sin iGPU — requiere agregar GT 1030 (~$40 USD) solo para señal de video en mantenimientos. |
 
 ### Ruta de Upgrade Recomendada
 
 
 
-> Ambos procesadores usan el mismo socket AM5 y la misma placa B650.
-> El upgrade de Fase 1 a Fase 2 es literalmente: apagar servidor, cambiar CPU, encender.
+```
+Fase 1:  Ryzen 7 8700G  →  Fase 2 opción A:  Ryzen 7 8700G  (mantener, sin GPU dedicada)
+                         →  Fase 2 opción B:  Ryzen 7 9700G  (upgrade Zen 5, sin GPU dedicada)
+                         →  Fase 2 opción C:  Ryzen 9 9900X  (máximo rendimiento, necesita GT 1030)
+```
+
+> Todos usan el mismo socket AM5 y la misma placa B650.
+> El upgrade es: apagar servidor, cambiar CPU, encender.
+>
+> **Recomendación:** para Thoth en Fase 2 (ERP, no ML local), mantener el **8700G o actualizar
+> al 9700G** es suficiente y evita comprar GPU dedicada. El 9900X solo vale la pena si el
+> crecimiento supera los 30 tenants o se agregan cargas de ML intensivas.
 
 ---
 
@@ -123,7 +131,14 @@
 
 ### ¿Es necesaria?
 
-No.
+**En Fase 1: No.** El Ryzen 7 8700G tiene iGPU integrada (Radeon 780M) que entrega señal
+de video por HDMI o DisplayPort directamente desde la placa madre. Suficiente para instalar
+Ubuntu y conectar un monitor en mantenimientos ocasionales.
+
+**En Fase 2: Tampoco, si sigues la ruta recomendada.** Manteniendo el 8700G o actualizando
+al 9700G (Zen 5, CES 2026), continúas teniendo iGPU sin necesitar GPU dedicada. Solo
+necesitarías una GPU dedicada si haces upgrade al 9900X/9950X para cargas extremas — en
+ese caso una GT 1030 (~$40 USD) es suficiente para señal de video en mantenimientos.
 
 Un servidor para:
 
@@ -179,7 +194,7 @@ Actualmente, para Thoth, una GPU dedicada no aporta beneficios.
 
 | Componente | Recomendación |
 |-----------|---------------|
-| CPU | AMD Ryzen 7 9700X |
+| CPU | AMD Ryzen 7 8700G (con iGPU Radeon 780M) |
 | Placa | MSI MAG B650 Tomahawk WiFi |
 | RAM | 32 GB DDR5-5600 (2 × 16 GB, 2 slots libres) |
 | SSD principal | 1 TB NVMe PCIe 4.0 |
@@ -194,9 +209,10 @@ Actualmente, para Thoth, una GPU dedicada no aporta beneficios.
 
 | Componente | Recomendación |
 |-----------|---------------|
-| CPU | AMD Ryzen 9 9900X |
-| Placa | MSI MAG B650 Tomahawk WiFi (misma placa) |
-| RAM | 96 GB DDR5-5600 (agregar 2 × 32 GB) |
+| CPU | AMD Ryzen 7 8700G (mantener) o Ryzen 7 9700G (upgrade Zen 5) |
+| Placa | MSI MAG B650 Tomahawk WiFi (misma placa de Fase 1) |
+| RAM | 96 GB DDR5-5600 (agregar 2 × 32 GB a los slots libres) |
+| GPU | No necesaria — el 8700G y 9700G tienen iGPU |
 | SSD principal | 2 TB NVMe |
 | Disco respaldo | 1 TB SSD |
 | Fuente | 750 W 80+ Gold |
@@ -862,5 +878,5 @@ docker exec -it thoth-postgresql psql -U app_user -d thoth
 
 ---
 
-*Ver [ARQUITECTURA.md](./ARQUITECTURA.md) para el contexto completo del stack.*
-*Ver [BUENAS_PRACTICAS.md](./BUENAS_PRACTICAS.md) para convenciones de seguridad.*
+*Ver [ARQUITECTURA.md](../Documentacion/ARQUITECTURA.md) para el contexto completo del stack.*
+*Ver [BUENAS_PRACTICAS.md](../Documentacion/BUENAS_PRACTICAS.md) para convenciones de seguridad.*
