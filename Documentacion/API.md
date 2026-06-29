@@ -245,7 +245,129 @@ Implementado con Redis (clave: "rl:tenant_id:endpoint_group:ventana")
 
 ---
 
-## 8. Versionamiento
+## 8. Idempotencia
+
+Previene operaciones duplicadas cuando el usuario hace doble clic, la red falla y reintenta, o el cliente envía la misma request más de una vez.
+
+### Cómo funciona
+
+El cliente genera un UUID único por cada **intención de operación** y lo envía en el header `Idempotency-Key`. Si el servidor recibe la misma key dos veces, devuelve el resultado de la primera sin reprocesar nada.
+
+```
+1. Usuario hace clic en "Confirmar pedido"
+   → cliente genera: Idempotency-Key: 550e8400-e29b-41d4-a716-446655440000
+
+2. Primera request llega al servidor
+   → no existe en Redis → procesar → guardar resultado en Redis → responder
+
+3. Usuario hace doble clic (segunda request con la misma key)
+   → existe en Redis → devolver resultado guardado → no se crea pedido duplicado
+```
+
+### Implementación en Fastify
+
+```typescript
+// middleware/idempotency.ts
+import { FastifyRequest, FastifyReply } from 'fastify';
+import { redis } from '../plugins/redis';
+
+const IDEMPOTENCY_TTL = 86400; // 24 horas en segundos
+
+export async function idempotencyMiddleware(req: FastifyRequest, reply: FastifyReply) {
+  const key = req.headers['idempotency-key'] as string;
+  if (!key) return; // si el cliente no manda key, procesar normalmente
+
+  const redisKey = `idempotency:${req.user.tenantId}:${key}`;
+
+  // Verificar si ya existe un resultado para esta key
+  const cached = await redis.get(redisKey);
+  if (cached) {
+    const { statusCode, body } = JSON.parse(cached);
+    return reply.code(statusCode).send(body);
+  }
+
+  // Marcar como "en proceso" para evitar race conditions
+  const locked = await redis.set(redisKey, JSON.stringify({ status: 'processing' }), {
+    EX: IDEMPOTENCY_TTL,
+    NX: true, // solo setear si NO existe
+  });
+
+  if (!locked) {
+    return reply.code(409).send({
+      ok: false,
+      error: { codigo: 'REQUEST_EN_PROCESO', mensaje: 'Esta operación ya está siendo procesada.' }
+    });
+  }
+
+  // Guardar el resultado real al enviar la respuesta
+  reply.addHook('onSend', async (_req, _reply, payload) => {
+    await redis.set(redisKey, JSON.stringify({
+      statusCode: reply.statusCode,
+      body: payload,
+    }), { EX: IDEMPOTENCY_TTL });
+  });
+}
+```
+
+### Registro en Fastify
+
+```typescript
+// Aplicar solo a rutas POST que crean recursos
+fastify.addHook('preHandler', async (req, reply) => {
+  if (req.method === 'POST') {
+    await idempotencyMiddleware(req, reply);
+  }
+});
+```
+
+### Cómo lo llama el cliente (React / Flutter)
+
+```typescript
+// utils/api.ts — generar key una sola vez por acción del usuario
+import { v4 as uuidv4 } from 'uuid';
+
+async function confirmarPedido(pedidoData: NuevoPedido) {
+  const idempotencyKey = uuidv4(); // se genera antes de enviar, no en cada reintento
+
+  return fetch('/api/v1/pedidos', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`,
+      'Idempotency-Key': idempotencyKey, // misma key en reintentos
+    },
+    body: JSON.stringify(pedidoData),
+  });
+}
+```
+
+> **Importante:** el cliente debe generar la key **antes** de intentar la operación
+> y reutilizar la misma key si reintenta por error de red.
+> Generar una key nueva en cada reintento elimina completamente la protección.
+
+### Endpoints donde es obligatorio
+
+| Endpoint | Riesgo sin idempotencia |
+|----------|------------------------|
+| `POST /pedidos` | Pedido duplicado — cliente cobrado dos veces |
+| `POST /pedidos/:id/confirmar` | Stock descontado dos veces |
+| `POST /inventario/movimiento` | Movimiento de inventario duplicado |
+| `POST /compras/ordenes` | Orden de compra duplicada al proveedor |
+| `POST /compras/ordenes/:id/recibir` | Mercadería ingresada dos veces al stock |
+| `POST /flota/rutas` | Ruta duplicada asignada al mismo conductor |
+
+### Endpoints donde NO aplica
+
+| Endpoint | Razón |
+|----------|-------|
+| `GET *` | Las lecturas son naturalmente idempotentes |
+| `PUT *` | Actualizar con los mismos datos dos veces da el mismo resultado |
+| `DELETE *` | Eliminar algo inexistente devuelve 404 — aceptable |
+| `POST /auth/login` | No crea recursos — sin riesgo de duplicado |
+
+---
+
+## 9. Versionamiento
 
 La API se versiona en la URL (`/v1/`, `/v2/`).
 
