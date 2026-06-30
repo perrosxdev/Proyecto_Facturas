@@ -1797,3 +1797,460 @@ Define cuánto tiempo se conserva cada tipo de dato:
 | Datos de tenants inactivos | 1 año después de baja | Posible reactivación |
 
 > **Nota legal:** en Chile, el SII puede solicitar información tributaria de los últimos 6 años. Los documentos relacionados con ventas y compras deben conservarse al menos ese tiempo.
+
+
+---
+
+## 23. Testing de RLS — Aislamiento entre Tenants
+
+El riesgo más crítico en un sistema multitenancy es que un bug filtre datos de un tenant a otro. Esto debe estar probado automáticamente en cada deploy, no verificado manualmente de vez en cuando.
+
+### Test de aislamiento obligatorio
+
+```typescript
+// tests/integration/rls-isolation.test.ts
+describe('Aislamiento RLS entre tenants', () => {
+  let tenantA: Tenant;
+  let tenantB: Tenant;
+  let productoTenantA: Producto;
+
+  beforeAll(async () => {
+    tenantA = await crearTenantDePrueba('Tenant A');
+    tenantB = await crearTenantDePrueba('Tenant B');
+
+    productoTenantA = await ejecutarComoTenant(tenantA.id, async (client) => {
+      return client.query(
+        'INSERT INTO productos (tenant_id, nombre) VALUES ($1, $2) RETURNING *',
+        [tenantA.id, 'Producto Solo de A']
+      );
+    });
+  });
+
+  test('Tenant B NO puede leer productos de Tenant A', async () => {
+    const resultado = await ejecutarComoTenant(tenantB.id, async (client) => {
+      return client.query('SELECT * FROM productos WHERE id = $1', [productoTenantA.id]);
+    });
+
+    expect(resultado.rows).toHaveLength(0); // RLS debe filtrar, devolver vacío
+  });
+
+  test('Tenant B NO puede modificar productos de Tenant A', async () => {
+    const resultado = await ejecutarComoTenant(tenantB.id, async (client) => {
+      return client.query(
+        'UPDATE productos SET nombre = $1 WHERE id = $2 RETURNING *',
+        ['Hackeado', productoTenantA.id]
+      );
+    });
+
+    expect(resultado.rowCount).toBe(0); // RLS bloquea el UPDATE, 0 filas afectadas
+
+    // Verificar que el producto original sigue intacto
+    const verificacion = await ejecutarComoTenant(tenantA.id, async (client) => {
+      return client.query('SELECT nombre FROM productos WHERE id = $1', [productoTenantA.id]);
+    });
+    expect(verificacion.rows[0].nombre).toBe('Producto Solo de A');
+  });
+
+  test('Tenant B NO puede eliminar productos de Tenant A', async () => {
+    const resultado = await ejecutarComoTenant(tenantB.id, async (client) => {
+      return client.query('DELETE FROM productos WHERE id = $1', [productoTenantA.id]);
+    });
+
+    expect(resultado.rowCount).toBe(0);
+  });
+
+  test('Query sin tenant_id seteado no debe devolver nada', async () => {
+    // Simula un bug donde se olvida setear app.current_tenant
+    const client = await pool.connect();
+    try {
+      const resultado = await client.query('SELECT * FROM productos');
+      expect(resultado.rows).toHaveLength(0); // sin tenant seteado, RLS no muestra nada
+    } finally {
+      client.release();
+    }
+  });
+});
+```
+
+### Correr este test en CADA módulo nuevo
+
+Cualquier tabla nueva con `tenant_id` debe pasar por esta misma batería de tests antes de mergear a producción. Agregar al checklist de PR (ver sección 26):
+
+```
+[ ] La tabla nueva tiene RLS habilitado (ALTER TABLE ... ENABLE ROW LEVEL SECURITY)
+[ ] La tabla nueva tiene política de aislamiento (CREATE POLICY tenant_isolation ...)
+[ ] Existe un test de aislamiento para la tabla nueva
+[ ] El test pasa en CI antes de aprobar el PR
+```
+
+### Test automatizado en CI/CD
+
+```yaml
+# Agregar al pipeline de GitHub Actions
+- name: Test de aislamiento RLS
+  run: pnpm test:rls
+  env:
+    DATABASE_URL: postgresql://app_user:test@localhost:5432/thoth_test
+  # Este test NUNCA debe saltarse, ni siquiera con --skip-tests
+```
+
+---
+
+## 24. Rendimiento — N+1 Queries
+
+### El problema
+
+El error de rendimiento más común y silencioso: hacer una query por cada elemento de una lista en lugar de una sola query con JOIN.
+
+```typescript
+// ❌ N+1 — una query por cada pedido (si hay 50 pedidos, son 51 queries)
+const pedidos = await db('pedidos').where({ tenant_id }).select('*');
+
+for (const pedido of pedidos) {
+  pedido.cliente = await db('clientes').where({ id: pedido.cliente_id }).first();
+  // ☝️ esto se ejecuta 50 veces — una query separada por cada pedido
+}
+```
+
+```typescript
+// ✅ Una sola query con JOIN
+const pedidos = await db('pedidos')
+  .join('clientes', 'pedidos.cliente_id', 'clientes.id')
+  .where({ 'pedidos.tenant_id': tenant_id })
+  .select(
+    'pedidos.*',
+    'clientes.nombre as cliente_nombre',
+    'clientes.rut as cliente_rut'
+  );
+// Una sola query — sin importar si hay 5 o 5000 pedidos
+```
+
+```typescript
+// ✅ Alternativa cuando se necesitan objetos relacionados completos: cargar en batch
+const pedidos = await db('pedidos').where({ tenant_id }).select('*');
+const clienteIds = [...new Set(pedidos.map(p => p.cliente_id))];
+
+const clientes = await db('clientes').whereIn('id', clienteIds).select('*');
+const clientesPorId = new Map(clientes.map(c => [c.id, c]));
+
+pedidos.forEach(p => { p.cliente = clientesPorId.get(p.cliente_id); });
+// 2 queries totales en lugar de 1 + N
+```
+
+### Dónde es más probable que ocurra en Thoth
+
+| Caso en Thoth | Riesgo |
+|---------------|--------|
+| Listar pedidos con datos del cliente | Alto — hacerlo siempre con JOIN |
+| Listar pedidos con sus items | Alto — usar JOIN o cargar items en batch |
+| Dashboard con KPIs de múltiples módulos | Alto — cada KPI no debe iterar registro por registro |
+| Reporte de inventario con nombre de producto | Medio — JOIN entre inventario y productos |
+| Lista de rutas con vehículo y conductor | Alto — 2 JOINs en una sola query |
+
+### Cómo detectarlo
+
+```typescript
+// Activar logging de queries en desarrollo para ver cuántas se ejecutan
+// knexfile.js
+module.exports = {
+  development: {
+    // ...
+    debug: true, // muestra cada query ejecutada en consola
+  }
+};
+
+// Si ves 50 queries idénticas con solo el ID cambiando → es un N+1
+```
+
+```sql
+-- En PostgreSQL, ver queries repetidas en un período corto
+SELECT query, calls, mean_exec_time
+FROM pg_stat_statements
+WHERE calls > 20
+ORDER BY calls DESC
+LIMIT 10;
+-- Si una query simple aparece con cientos de calls en poco tiempo → sospechoso de N+1
+```
+
+---
+
+## 25. Seguridad Mobile — Flutter
+
+### Almacenamiento seguro de tokens
+
+`SharedPreferences` (el equivalente a localStorage) guarda datos en texto plano. Nunca usarlo para JWT:
+
+```dart
+// ❌ INSEGURO — SharedPreferences no encripta los datos
+final prefs = await SharedPreferences.getInstance();
+await prefs.setString('access_token', token); // texto plano, legible por otras apps con root
+
+// ✅ SEGURO — flutter_secure_storage usa Keystore (Android) encriptado
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
+final storage = FlutterSecureStorage(
+  aOptions: AndroidOptions(encryptedSharedPreferences: true),
+);
+
+await storage.write(key: 'access_token', value: token);
+await storage.write(key: 'refresh_token', value: refreshToken);
+
+final token = await storage.read(key: 'access_token');
+```
+
+```yaml
+# pubspec.yaml
+dependencies:
+  flutter_secure_storage: ^9.0.0
+```
+
+### Certificate Pinning
+
+Sin certificate pinning, la app confía en cualquier certificado SSL válido — esto permite ataques man-in-the-middle si alguien intercepta la red (ej: WiFi público comprometido). Con pinning, la app solo confía en el certificado específico de tu servidor:
+
+```dart
+// services/dio_client.dart
+import 'package:dio/dio.dart';
+import 'package:dio_certificate_pinning/dio_certificate_pinning.dart';
+
+final dio = Dio();
+
+dio.interceptors.add(
+  CertificatePinningInterceptor(
+    allowedSHAFingerprints: [
+      'SHA256_FINGERPRINT_DEL_CERTIFICADO_DE_THOTH', // obtener con openssl
+    ],
+  ),
+);
+
+// Obtener el fingerprint del certificado del servidor:
+// openssl s_client -connect tudominio.cl:443 | openssl x509 -fingerprint -sha256 -noout
+```
+
+> **Importante:** al renovar el certificado SSL (Certbot lo hace cada 90 días), el fingerprint cambia. Hay que actualizar la app o usar pinning por clave pública del CA en lugar del certificado específico para evitar romper la app en cada renovación.
+
+### Ofuscación del APK
+
+Antes de distribuir el APK (incluso internamente), ofuscar el código compilado:
+
+```bash
+# Compilar con ofuscación habilitada
+flutter build apk --obfuscate --split-debug-info=build/debug-info
+
+# Esto dificulta que alguien haga reverse engineering del APK
+# y extraiga lógica de negocio, endpoints de API, o lógica de validación
+```
+
+```
+# android/app/build.gradle — habilitar minify y shrink también
+buildTypes {
+    release {
+        minifyEnabled true
+        shrinkResources true
+        proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+    }
+}
+```
+
+---
+
+## 26. Resiliencia — Circuit Breaker
+
+### El problema
+
+Si el servicio Python (analytics) se cae o responde muy lento, sin protección esto puede consumir todos los workers de Node esperando una respuesta que nunca llega, tumbando toda la API — incluyendo módulos que no tienen nada que ver con analytics.
+
+### Circuit Breaker — patrón de protección
+
+```typescript
+// utils/circuit-breaker.ts
+class CircuitBreaker {
+  private fallos = 0;
+  private estado: 'cerrado' | 'abierto' | 'medio_abierto' = 'cerrado';
+  private ultimoFallo = 0;
+
+  constructor(
+    private maxFallos = 5,
+    private tiempoReintentoMs = 30000 // 30 segundos antes de reintentar
+  ) {}
+
+  async ejecutar<T>(fn: () => Promise<T>, fallback: () => T): Promise<T> {
+    if (this.estado === 'abierto') {
+      if (Date.now() - this.ultimoFallo > this.tiempoReintentoMs) {
+        this.estado = 'medio_abierto'; // probar de nuevo
+      } else {
+        return fallback(); // circuito abierto — no intentar, usar fallback directo
+      }
+    }
+
+    try {
+      const resultado = await fn();
+      this.fallos = 0;
+      this.estado = 'cerrado'; // funcionó — resetear
+      return resultado;
+    } catch (error) {
+      this.fallos++;
+      this.ultimoFallo = Date.now();
+
+      if (this.fallos >= this.maxFallos) {
+        this.estado = 'abierto'; // demasiados fallos — abrir el circuito
+      }
+
+      return fallback();
+    }
+  }
+}
+
+export const circuitBreakerAnalytics = new CircuitBreaker(5, 30000);
+```
+
+```typescript
+// Uso al llamar al servicio Python
+async function getPrediccionDemanda(productoId: string) {
+  return circuitBreakerAnalytics.ejecutar(
+    async () => {
+      const response = await fetch(`${PYTHON_URL}/prediccion/${productoId}`, {
+        signal: AbortSignal.timeout(5000), // timeout de 5s
+      });
+      return response.json();
+    },
+    () => ({
+      // Fallback: degradar con gracia en lugar de romper
+      disponible: false,
+      mensaje: 'Predicciones no disponibles temporalmente. Intenta más tarde.',
+    })
+  );
+}
+```
+
+### Retry con backoff exponencial
+
+Cuando una llamada falla por un problema transitorio (latencia momentánea, no caída total), reintentar con espera creciente en lugar de loop inmediato:
+
+```typescript
+// utils/retry.ts
+async function conReintentos<T>(
+  fn: () => Promise<T>,
+  maxIntentos = 3,
+  esperaBaseMs = 500
+): Promise<T> {
+  for (let intento = 1; intento <= maxIntentos; intento++) {
+    try {
+      return await fn();
+    } catch (error) {
+      if (intento === maxIntentos) throw error; // se acabaron los intentos
+
+      const espera = esperaBaseMs * Math.pow(2, intento - 1); // 500ms, 1s, 2s, 4s...
+      await new Promise(resolve => setTimeout(resolve, espera));
+    }
+  }
+  throw new Error('No debería llegar aquí');
+}
+
+// Uso:
+const prediccion = await conReintentos(
+  () => fetch(`${PYTHON_URL}/prediccion`).then(r => r.json()),
+  3,    // máximo 3 intentos
+  500   // empezar con 500ms de espera
+);
+```
+
+### Degraded mode — qué sigue funcionando si algo falla
+
+Definir explícitamente qué pasa con cada módulo si un servicio dependiente se cae:
+
+| Si esto falla | Qué sigue funcionando | Qué se degrada |
+|----------------|------------------------|-----------------|
+| Python/Analytics se cae | Inventario, ventas, compras, flota — todo el core sigue funcionando | Dashboards y predicciones muestran "no disponible temporalmente" |
+| Redis se cae | Operaciones de BD siguen funcionando | Rate limiting, idempotencia y caché quedan deshabilitados — riesgo de duplicados aumenta, advertir en logs |
+| Nginx pierde SSL | — | Sitio completo inaccesible — esto SÍ es crítico, alertar inmediatamente |
+| Una bodega específica tiene datos inconsistentes | El resto de bodegas funciona normal (gracias a RLS y separación lógica) | Solo esa bodega se ve afectada |
+
+---
+
+## 27. Load Testing — Antes de Producción
+
+### Por qué hacerlo antes del lanzamiento
+
+Sin load testing, no sabes si tu servidor realmente soporta 40-50 usuarios simultáneos hasta que ya están todos conectados y algo falla en vivo. Mejor descubrir los límites antes.
+
+### Herramienta recomendada: k6
+
+```bash
+# Instalar k6
+sudo apt install -y k6
+# o: brew install k6 (Mac)
+```
+
+```javascript
+// tests/load/login-y-pedidos.js
+import http from 'k6/http';
+import { check, sleep } from 'k6';
+
+export const options = {
+  stages: [
+    { duration: '1m', target: 20 },   // subir a 20 usuarios en 1 minuto
+    { duration: '3m', target: 50 },   // subir a 50 usuarios (objetivo Fase 1)
+    { duration: '2m', target: 50 },   // mantener 50 usuarios constante
+    { duration: '1m', target: 0 },    // bajar a 0 (cooldown)
+  ],
+  thresholds: {
+    http_req_duration: ['p(95)<500'],  // 95% de requests deben responder en <500ms
+    http_req_failed: ['rate<0.01'],    // menos del 1% de requests deben fallar
+  },
+};
+
+export default function () {
+  // 1. Login
+  const loginRes = http.post('https://api.tudominio.cl/v1/auth/login', JSON.stringify({
+    email: 'usuario_prueba@thoth.cl',
+    password: 'PasswordPrueba123!',
+  }), { headers: { 'Content-Type': 'application/json' } });
+
+  check(loginRes, { 'login exitoso': (r) => r.status === 200 });
+
+  const token = JSON.parse(loginRes.body).data.accessToken;
+
+  // 2. Listar pedidos (operación frecuente)
+  const pedidosRes = http.get('https://api.tudominio.cl/v1/pedidos', {
+    headers: { Authorization: `Bearer ${token}` },
+  });
+
+  check(pedidosRes, { 'pedidos cargan': (r) => r.status === 200 });
+
+  sleep(1); // simula tiempo de pensar del usuario real
+}
+```
+
+```bash
+# Correr el test de carga (NUNCA contra producción real con datos de clientes)
+k6 run tests/load/login-y-pedidos.js
+
+# Resultado muestra:
+# - p95 de tiempo de respuesta
+# - tasa de error
+# - requests por segundo soportados
+# - en qué punto exacto el servidor empieza a degradarse
+```
+
+### Cuándo correr load testing
+
+```
+✅ Antes del primer lanzamiento a producción (obligatorio)
+✅ Antes de cada salto de escala (Fase 1 → Fase 2)
+✅ Después de cambios grandes de arquitectura (nuevo servicio, cambio de BD)
+✅ Periódicamente cada 3-6 meses para detectar degradación gradual
+
+❌ NUNCA correr load testing contra producción real con datos de clientes
+✅ Correr siempre contra un ambiente de staging idéntico a producción
+```
+
+### Qué buscar en los resultados
+
+| Métrica | Objetivo Fase 1 | Acción si no se cumple |
+|---------|------------------|------------------------|
+| p95 tiempo de respuesta | < 500ms | Revisar queries lentas, agregar índices, caché |
+| Tasa de error | < 1% | Revisar logs del momento exacto de fallos |
+| Conexiones BD en el pico | < 18 de 20 | Aumentar pool o agregar PgBouncer |
+| CPU del servidor en el pico | < 80% | Considerar upgrade de CPU antes de Fase 2 |
+| RAM en el pico | < 85% | Revisar memory leaks o aumentar RAM |
