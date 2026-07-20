@@ -1,4 +1,4 @@
-# Servidor.md — Montaje del Servidor Físico para Thoth
+# SERVIDOR.md — Montaje del Servidor Físico para Thoth
 
 > Sistema operativo recomendado: **Ubuntu Server 24.04 LTS**
 > (Debian 12 es una alternativa válida con comandos casi idénticos)
