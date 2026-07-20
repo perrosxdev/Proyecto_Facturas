@@ -18,7 +18,7 @@
 | 7 | [BUENAS_PRACTICAS.md](./Documentacion/BUENAS_PRACTICAS.md) | Seguridad, CI/CD, testing, convenciones |
 | 8 | [LOGICA_NEGOCIO.md](./Documentacion/LOGICA_NEGOCIO.md) | Fórmulas de negocio: precios, márgenes, inventario, crédito, flota y preguntas clave |
 | 9 | [OPTIMIZACION.md](./Documentacion/OPTIMIZACION.md) | Programación lineal y no lineal: mezcla óptima, precio sombra, precio con elasticidad |
-| 10 | [SERVIDOR.md](./Servidor_Documentacion/SERVIDOR.md) | Hardware, instalación y administración del servidor |
+| 10 | [Servidor.md](./Servidor_Documentacion/Servidor.md) | Hardware, instalación y administración del servidor |
 
 ---
 
@@ -36,7 +36,7 @@ De ahí nació la decisión de construir un sistema integral que cubra todos los
 
 > La aplicación debe ser completamente intuitiva. Cualquier persona, incluso sin experiencia tecnológica, debe poder usarla sin dificultad.
 
-Este principio guía todas las decisiones de UX y flujo de la aplicación — si algo requiere capacitación extensa, está mal diseñado.
+Este principio guía todas las decisiones de UX y flujo de la aplicación — si algo requiere capacitación extensa, está mal diseñado. Aplica con especial fuerza a los módulos más matemáticamente complejos (analytics, optimización): un dueño de distribuidora sin formación técnica debe poder usarlos igual de bien que el resto del sistema — ver `OPTIMIZACION.md` sección 10 para el criterio de traducción a lenguaje simple que sigue todo el proyecto.
 
 ---
 
@@ -48,6 +48,8 @@ Este principio guía todas las decisiones de UX y flujo de la aplicación — si
 | Controlar quién ve qué información | Permisos por bodega — cada usuario solo accede a sus datos |
 | Coordinar entregas entre bodegas y clientes | Módulo de flota integrado al flujo de pedidos |
 | Emitir documentos tributarios (futuro) | Integración SII — boletas y facturas electrónicas |
+| Fijar precios correctos y saber cuánto se está ganando realmente | Motor de fórmulas de negocio — precio, margen vs markup, punto de equilibrio (ver `LOGICA_NEGOCIO.md`) |
+| Decidir qué y cuánto comprar dado presupuesto y bodega limitados | Módulo de optimización — programación lineal y no lineal (ver `OPTIMIZACION.md`) |
 | Tomar decisiones con datos reales | Analytics con KPIs, dashboards y predicciones |
 | Operar desde cualquier lugar | Web + app Android accesibles desde cualquier dispositivo |
 
@@ -68,7 +70,8 @@ Thoth
 ├── 📦 Gestión de Inventario
 │   ├── Stock independiente por bodega
 │   ├── Movimientos (entrada, salida, transferencia, ajuste)
-│   └── Alertas automáticas de stock mínimo
+│   ├── Alertas automáticas de stock mínimo
+│   └── Punto de reorden y stock de seguridad (ver LOGICA_NEGOCIO.md)
 ├── 🗂️ Gestión de Productos
 │   └── Catálogo centralizado de artículos
 ├── 🤝 Gestión de Proveedores
@@ -76,6 +79,7 @@ Thoth
 ├── 💰 Gestión de Ventas
 │   ├── Pedidos y seguimiento por bodega
 │   ├── Gestión de clientes y crédito
+│   ├── Motor de precios (costo, ganancia, comisión de medio de pago, IVA)
 │   └── (Futuro) Integración SII — boletas y facturas electrónicas
 ├── 🛒 Gestión de Compras
 │   ├── Órdenes de compra a proveedores
@@ -83,10 +87,15 @@ Thoth
 ├── 🚛 Gestión de Flota
 │   ├── Vehículos y registro de mantenimientos
 │   └── Rutas y asignación de conductores a pedidos
-└── 📊 Analytics & BI
-    ├── Dashboards interactivos con KPIs en tiempo real
-    ├── Reportes exportables (Excel / PDF)
-    └── Predicciones de demanda y simulaciones de temporada
+├── 📊 Analytics & BI
+│   ├── Dashboards interactivos con KPIs en tiempo real
+│   ├── Reportes exportables (Excel / PDF)
+│   └── Predicciones de demanda y simulaciones de temporada
+└── 🧮 Optimización y Toma de Decisiones (Fase 6)
+    ├── Mezcla óptima de compra dado presupuesto y bodega (programación lineal)
+    ├── Precio óptimo con elasticidad de demanda (programación no lineal)
+    ├── Precio sombra — qué recurso limitante conviene conseguir más
+    └── Comparación "dinero dejado en la mesa" vs. decisiones reales
 ```
 
 ---
@@ -119,6 +128,7 @@ Esto permite que distribuidoras con múltiples puntos de venta mantengan control
 | Integración SII personalizada | ❌ Genérica | ✅ A medida |
 | Adaptado al rubro distribución Chile | ❌ | ✅ |
 | Modelo de negocio propio (SaaS) | ❌ | ✅ |
+| Optimización de compras/precios integrada | ❌ Rara vez incluida | ✅ Nativa (LP/NLP) |
 
 ### ¿Por qué multitenancy centralizado y no un sistema por empresa?
 
@@ -130,6 +140,10 @@ El objetivo a largo plazo es que Thoth sea un negocio SaaS — múltiples distri
 - Escalamiento controlado
 
 > La seguridad entre empresas se garantiza a nivel de base de datos con PostgreSQL RLS — aunque hubiera un bug en el código, la BD nunca devuelve datos de otra empresa.
+
+### ¿Por qué la lógica de negocio y la optimización son genéricas, no específicas a huevos?
+
+`LOGICA_NEGOCIO.md` y `OPTIMIZACION.md` se diseñan explícitamente para que ningún tenant necesite personalización de código — solo cargar sus propios productos, costos y límites. El negocio de huevos es el caso de validación inicial, pero cualquier distribuidora (bebidas, abarrotes, insumos de limpieza, etc.) debe poder usar el mismo motor de cálculo sin que el código tenga nada hardcodeado a un rubro particular. Esto es una condición necesaria para que Thoth funcione como SaaS multi-cliente y no como una herramienta interna adaptada después.
 
 ---
 
@@ -153,7 +167,8 @@ El objetivo a largo plazo es que Thoth sea un negocio SaaS — múltiples distri
           │                │
 ┌─────────┴────────────────┴───────────────────┐
 │            SERVICIOS BACKEND                 │
-│  Node.js (core)   │  Python (analytics/ML)  │
+│  Node.js (core)   │  Python (analytics/ML/  │
+│                    │  optimización LP/NLP)   │
 └───────────────────┴──────────────────────────┘
                    │
 ┌──────────────────────────────────────────────┐

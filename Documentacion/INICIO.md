@@ -8,10 +8,11 @@
 
 ## Antes de Empezar — Leer Primero
 
-Antes de tocar código o hardware, lee estos dos documentos completos. No toma más de 30 minutos y te evitará decisiones equivocadas después:
+Antes de tocar código o hardware, lee estos documentos completos. No toma más de 45 minutos y te evitará decisiones equivocadas después:
 
 - 📄 [README.md](./README.md) — Visión general del proyecto, qué es Thoth, por qué se construye así
 - 📄 [ARQUITECTURA.md](./ARQUITECTURA.md) — Stack tecnológico completo con justificaciones
+- 📄 [LOGICA_NEGOCIO.md](./LOGICA_NEGOCIO.md) — Qué calcula Thoth y por qué (precios, márgenes, inventario, crédito)
 
 ---
 
@@ -21,7 +22,7 @@ Antes de tocar código o hardware, lee estos dos documentos completos. No toma m
 
 ### Paso 1 · Comprar el Hardware
 
-Consultar la sección **Especificaciones Recomendadas** en [SERVIDOR.md](./SERVIDOR.md).
+Consultar la sección **Especificaciones Recomendadas** en [Servidor.md](./Servidor_Documentacion/Servidor.md).
 
 Configuración mínima recomendada para Fase 1:
 
@@ -65,7 +66,7 @@ Conectarse por SSH desde tu computador personal y ejecutar todos los pasos de co
 ssh usuario@ip-del-servidor
 ```
 
-Seguir en orden los pasos del documento [SERVIDOR.md](./SERVIDOR.md):
+Seguir en orden los pasos del documento [Servidor.md](./Servidor_Documentacion/Servidor.md):
 
 - [ ] Paso 1 — Actualizar el sistema
 - [ ] Paso 2 — Configurar UFW (firewall)
@@ -95,7 +96,7 @@ Instalar en tu computador personal:
 ```
 Node.js 20 LTS        → runtime para el backend y las herramientas
 pnpm                  → gestor de paquetes (más rápido que npm)
-Python 3.12+          → para el servicio de analytics
+Python 3.12+          → para el servicio de analytics y optimización
 Git                   → control de versiones
 VS Code               → editor principal
 Docker Desktop        → para correr PostgreSQL y Redis en local
@@ -202,7 +203,7 @@ Orden de desarrollo recomendado dentro de `apps/api-node/`:
 5. **Módulo bodegas:** CRUD + consulta de stock
 6. **Módulo inventario:** movimientos, historial, alertas de stock bajo
 7. **Módulo clientes:** CRUD + límite de crédito
-8. **Módulo ventas (pedidos):** crear pedido, validar stock, estados, numeración automática
+8. **Módulo ventas (pedidos):** crear pedido, validar stock, estados, numeración automática, motor de precios (ver [LOGICA_NEGOCIO.md](./LOGICA_NEGOCIO.md))
 
 > Regla: no pasar al siguiente módulo sin probar el anterior end-to-end.
 
@@ -262,14 +263,14 @@ docker exec -it thoth-postgresql psql -U app_user -d thoth -f /migrations/001_in
 ## ETAPA 5 — Fase 3 · Analytics y Dashboards
 
 > Objetivo: visibilidad completa del negocio.
-> Consultar [ANALYTICS.md](./ANALYTICS.md)
+> Consultar [ANALYTICS.md](./ANALYTICS.md) · [LOGICA_NEGOCIO.md](./LOGICA_NEGOCIO.md)
 
 ### Paso 11 · Servicio Python (FastAPI)
 
 Dentro de `apps/api-python/`:
 
 1. Setup FastAPI + SQLAlchemy + Pandas
-2. Endpoints de KPIs por módulo (ventas, inventario, compras, flota)
+2. Endpoints de KPIs por módulo (ventas, inventario, compras, flota) — fórmulas en [LOGICA_NEGOCIO.md](./LOGICA_NEGOCIO.md)
 3. Exportación a Excel (openpyxl)
 4. Dashboard principal con datos en tiempo real
 5. Predicciones con Prophet (cuando haya ≥ 90 días de datos)
@@ -313,6 +314,22 @@ Dentro de `apps/mobile/`:
 
 ---
 
+## ETAPA 8 — Fase 6 · Escala, Multi-Rubro y Optimización
+
+> Solo iniciar cuando Analytics (Fase 3) esté sólido en producción — el módulo de
+> optimización depende de costos, márgenes y predicciones ya calculados correctamente.
+> Consultar [OPTIMIZACION.md](./OPTIMIZACION.md) para el diseño completo.
+
+- [ ] Motor de optimización LP — mezcla óptima de compra, precio sombra
+- [ ] Motor de optimización NLP — precio óptimo con elasticidad de demanda
+- [ ] Optimización multi-período y bajo incertidumbre (conectada a Prophet)
+- [ ] Comparación "dinero dejado en la mesa"
+- [ ] Multi-rubro, planes diferenciados, API pública
+
+✅ **Fase 6 completa cuando:** un dueño de distribuidora puede pedirle a Thoth una recomendación de compra o de precio y recibirla en lenguaje simple, sin necesitar conocimientos matemáticos.
+
+---
+
 ## Resumen Visual del Orden
 
 ```
@@ -331,7 +348,7 @@ ETAPA 2 · Entorno de Desarrollo
                 │
 ETAPA 3 · Fase 1 — Core
                 │
-    ├── Paso 8 · Backend API Node.js (auth · inventario · ventas)
+    ├── Paso 8 · Backend API Node.js (auth · inventario · ventas · motor de precios)
     ├── Paso 9 · Frontend React (login · inventario · ventas)
     └── Paso 10 · Primer deploy al servidor
                 │
@@ -350,6 +367,10 @@ ETAPA 6 · Fase 4 — App Móvil
 ETAPA 7 · Fase 5 — SII Chile
                 │
     └── Boletas y facturas electrónicas
+                │
+ETAPA 8 · Fase 6 — Escala y Optimización
+                │
+    └── Programación lineal/no lineal · Multi-rubro · Planes SaaS
 ```
 
 ---
@@ -366,7 +387,9 @@ ETAPA 7 · Fase 5 — SII Chile
 | [ANALYTICS.md](./ANALYTICS.md) | KPIs, dashboards, predicciones |
 | [ROADMAP.md](./ROADMAP.md) | Tareas detalladas por fase |
 | [BUENAS_PRACTICAS.md](./BUENAS_PRACTICAS.md) | Seguridad, testing, CI/CD, convenciones |
-| [SERVIDOR.md](./SERVIDOR.md) | Hardware, instalación y administración del servidor |
+| [LOGICA_NEGOCIO.md](./LOGICA_NEGOCIO.md) | Fórmulas de precio, margen, inventario, crédito y flota |
+| [OPTIMIZACION.md](./OPTIMIZACION.md) | Programación lineal y no lineal — mezcla óptima, precio sombra, precio con elasticidad |
+| [Servidor.md](./Servidor_Documentacion/Servidor.md) | Hardware, instalación y administración del servidor |
 
 ---
 

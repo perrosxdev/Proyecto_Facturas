@@ -13,7 +13,7 @@ FASE 2 · Operaciones   [6–8 semanas]  · Compras + Flota + Empleados
 FASE 3 · Analytics     [4–6 semanas]  · Dashboards + KPIs + Predicciones
 FASE 4 · Mobile        [6–8 semanas]  · App Android (Flutter)
 FASE 5 · SII           [4–6 semanas]  · Integración boletas electrónicas
-FASE 6 · Scale         [ongoing]      · Performance, multi-rubro, marketplace
+FASE 6 · Scale         [ongoing]      · Optimización (LP/NLP), performance, multi-rubro, marketplace
 ```
 
 ---
@@ -83,12 +83,13 @@ FASE 6 · Scale         [ongoing]      · Performance, multi-rubro, marketplace
 - [ ] Validación de stock disponible al confirmar
 - [ ] Descuento a nivel de pedido e ítem
 - [ ] Cálculo automático de subtotal, impuesto (IVA 19%), total
+- [ ] Motor de cálculo de precio de venta — costo, ganancia deseada, comisión de medio de pago e IVA (ver `LOGICA_NEGOCIO.md` sección 2)
 - [ ] Estados del pedido: borrador → confirmado → en_preparacion → entregado
 - [ ] Numeración automática (PED-00001, PED-00002...)
 - [ ] Búsqueda y filtros de pedidos
 
 ### Entregable de la fase
-✅ Puedes crear un pedido para un cliente, que descuente el stock de la bodega, y marcarlo como entregado.
+✅ Puedes crear un pedido para un cliente, que descuente el stock de la bodega, y marcarlo como entregado, con el precio calculado correctamente según el motor de precios.
 
 ---
 
@@ -100,6 +101,7 @@ FASE 6 · Scale         [ongoing]      · Performance, multi-rubro, marketplace
 - [ ] CRUD de proveedores
 - [ ] Crear orden de compra con items
 - [ ] Recepción parcial o total de orden (actualiza inventario automáticamente)
+- [ ] Costo promedio ponderado (PMP) al recibir mercadería (ver `LOGICA_NEGOCIO.md` sección 4.3)
 - [ ] Conciliación de facturas de proveedor
 - [ ] Historial de compras por proveedor
 
@@ -130,6 +132,10 @@ FASE 6 · Scale         [ongoing]      · Performance, multi-rubro, marketplace
 - [ ] Dashboard de inventario (rotación, valorización, alertas)
 - [ ] Dashboard de compras (gasto, proveedores, lead time)
 - [ ] Dashboard de flota (entregas, tiempos)
+
+### KPIs y fórmulas de negocio
+- [ ] Implementar los KPIs de márgenes, rotación, crédito (DSO) y rentabilidad definidos en `LOGICA_NEGOCIO.md` secciones 3–9
+- [ ] Punto de equilibrio y contribución marginal por producto
 
 ### Reportes
 - [ ] Exportación a Excel de todos los módulos
@@ -199,12 +205,34 @@ Conectarse directamente al SII es complejo (XML firmado con certificado digital,
 
 ## FASE 6 — Escala y Expansión
 
+**Objetivo:** Llevar Thoth de "funciona para un tenant" a "funciona como SaaS multi-cliente con capacidades avanzadas de decisión".
+
+> **Prerrequisito:** Fase 3 (Analytics) debe estar sólida en producción — el módulo de optimización se apoya en costos, márgenes y predicciones de demanda ya calculados correctamente. Ver `OPTIMIZACION.md` sección 13.8 para el detalle de esta dependencia.
+
+### Módulo de Optimización (ver `OPTIMIZACION.md` para el diseño completo)
+- [ ] Motor LP — mezcla óptima de compra dado presupuesto y bodega (Simplex/HiGHS vía `scipy.optimize.linprog`)
+- [ ] Restricciones `≤`, `≥` y `=` configurables por el usuario sin tocar código
+- [ ] Precio sombra y rango de sensibilidad de restricciones y coeficientes (análisis de sensibilidad completo)
+- [ ] Vista de método gráfico para modelos de 2 variables (explicabilidad)
+- [ ] Motor NLP — precio óptimo con elasticidad de demanda (`SLSQP`/`trust-constr` para casos convexos, `differential_evolution`/`dual_annealing` para no convexos)
+- [ ] Programación entera/mixta — asignación de vehículos a rutas y compra en múltiplos de lote (OR-Tools / PuLP)
+- [ ] Optimización multi-período — plan de compras de varias semanas conectado a las predicciones de Prophet (`ANALYTICS.md`)
+- [ ] Optimización bajo incertidumbre — escenarios pesimista/esperado/optimista usando `predicciones_cache`
+- [ ] Comparación "dinero dejado en la mesa" — decisión real del usuario vs. óptimo calculado con los mismos datos
+- [ ] Traducción completa a lenguaje simple en la UI (wizard de configuración, sin jerga matemática — ver `OPTIMIZACION.md` sección 10)
+- [ ] Ejecución asíncrona vía BullMQ + WebSocket para modelos grandes
+- [ ] Permisos (`admin`/`supervisor`) y límites de plan (`max_variables_optimizacion`, `max_corridas_por_mes`)
+
+### Otras tareas de escala
 - [ ] Multi-rubro: adaptar módulos para retail, servicios, etc.
 - [ ] Marketplace de integraciones (contabilidad, logística externa)
 - [ ] App store de Thoth (módulos opcionales por tenant)
 - [ ] Planes diferenciados (starter / pro / enterprise)
 - [ ] API pública para integraciones de clientes
 - [ ] Centro de datos regional (si la escala lo justifica)
+
+### Entregable de la fase
+✅ Un dueño de distribuidora puede pedirle a Thoth "¿qué debería comprar este mes para maximizar mi ganancia?" y recibir una recomendación concreta, en lenguaje simple, con la opción de ver qué la limita y qué tan estable es la recomendación.
 
 ---
 
@@ -220,3 +248,5 @@ Después de cada fase, antes de pasar a la siguiente:
 ---
 
 *Ver [BUENAS_PRACTICAS.md](./BUENAS_PRACTICAS.md) para convenciones, seguridad y CI/CD.*
+*Ver [LOGICA_NEGOCIO.md](./LOGICA_NEGOCIO.md) para las fórmulas de precio, margen e inventario implementadas en las Fases 1 y 3.*
+*Ver [OPTIMIZACION.md](./OPTIMIZACION.md) para el diseño completo del módulo de optimización de la Fase 6.*
