@@ -24,6 +24,7 @@ grabado en piedra — se ajustan con datos reales apenas existan clientes pagand
 9. [Métricas de Negocio a Trackear](#9-métricas-de-negocio-a-trackear)
 10. [Roadmap Comercial](#10-roadmap-comercial)
 11. [Pendientes Legales](#11-pendientes-legales)
+12. [Pendientes Técnicos](#12-pendientes-técnicos)
 
 ---
 
@@ -48,19 +49,34 @@ pago real.
 
 ### 2.1 Filosofía general — modular, no por rubro
 
-La primera versión de este documento proponía planes fijos ("Starter", "Pro" con todo
-incluido). Se descarta ese enfoque a favor de un **modelo modular**, por una razón de
-fondo que conecta directo con cómo está diseñado el resto del producto: `LOGICA_NEGOCIO.md`
-y `OPTIMIZACION.md` son deliberadamente genéricos, sin nada hardcodeado a un rubro — un
-sistema de precios rígido por rubro ("Plan Distribuidora", "Plan Restaurant") iría en
-contra de ese principio y además no refleja la realidad: **un restaurant con varias
-sucursales pequeñas necesita más bodegas/sucursales pero no necesariamente Flota, mientras
-que un minimarket de un solo local no necesita ninguna de las dos.**
+Se descarta un enfoque de planes fijos por rubro ("Plan Distribuidora", "Plan Restaurant")
+a favor de un **modelo modular**, por una razón de fondo que conecta directo con cómo está
+diseñado el resto del producto: `LOGICA_NEGOCIO.md` y `OPTIMIZACION.md` son deliberadamente
+genéricos, sin nada hardcodeado a un rubro — un sistema de precios rígido por rubro iría en
+contra de ese principio y además no refleja la realidad: un restaurant con varias
+sucursales pequeñas necesita más sucursales pero no necesariamente Flota, mientras que un
+minimarket de un solo local no necesita ninguna de las dos.
 
-La solución: **un plan base según tamaño de operación** (usuarios, productos, bodegas) +
-**módulos opcionales** que cualquier cliente activa o no según lo que realmente necesita,
-sin importar su rubro. El "rubro" del cliente no restringe nada — solo se usa como
-**sugerencia en el onboarding** (sección 7.1) para recomendar qué módulos activar primero.
+La solución: **un plan base según tamaño de operación** (usuarios, productos, sucursales) +
+**mejoras opcionales** (módulos) que cualquier cliente activa según lo que realmente
+necesita, sin importar su rubro. El "rubro" del cliente no restringe nada — solo se usa
+como **sugerencia en el onboarding** (sección 7.1).
+
+**El modelo separa tres decisiones que un SaaS de planes rígidos suele mezclar en una
+sola:**
+
+| Eje | Qué resuelve | Ejemplo de sección |
+|---|---|---|
+| **Tamaño** (plan base: Starter/Pro) | Cuánto usuario/producto/sucursal viene incluido de fábrica | 2.2 |
+| **Funcionalidad** (mejoras de plan: Flota, Analytics, Optimización) | Qué módulos necesita el negocio, sin relación con su tamaño | 2.3 |
+| **Crecimiento incremental** (expansión de capacidad: usuarios y sucursales sueltos) | Crecer sin saltar de plan completo cuando el negocio no necesita más funcionalidad, solo más cupo | 2.4 |
+
+Separar estos tres ejes evita dos problemas típicos de los SaaS con planes cerrados: pagar
+de más por funciones que no se usan solo por necesitar más cupo, y enfrentar un salto de
+precio grande cuando el crecimiento real es chico (ej. una sucursal más). Esto es posible
+sin costo técnico adicional porque el servidor de Thoth es de **costo fijo, no variable
+por usuario/bodega** (ver `README.md`) — separar estos tres ejes es una decisión de cómo
+se le cobra al cliente, no una que encarezca la infraestructura.
 
 Como referencia de mercado (sin copiar su estructura): Bsale cobra entre 1,5 y 2,9 UF +
 IVA al mes (~$70.000–$135.000 CLP) por un POS/ERP multi-sucursal; GranLoop, más enfocado a
@@ -69,67 +85,148 @@ Thoth se posiciona en ese mismo rango, pero de forma modular en vez de por escal
 
 ### 2.2 Plan base — según tamaño de operación
 
-El plan base incluye siempre el núcleo operacional: productos, bodegas/sucursales,
-inventario, clientes, ventas y compras. Lo que cambia entre Starter y Pro son los límites
-de tamaño, no las funciones incluidas:
+El plan base incluye siempre el núcleo operacional: productos, sucursales (con sus
+bodegas internas), inventario, clientes, ventas y compras. Los límites de tamaño se miden
+en **sucursales**, no en bodegas — cada sucursal puede tener **hasta 10 bodegas** internas
+sin costo adicional (ver sección 2.6 para el detalle de esta decisión).
 
-| Plan base | Precio mensual (CLP + IVA) | Usuarios | Productos | Bodegas/Sucursales |
+| Plan base | Precio mensual (CLP + IVA) | Usuarios | Productos | Sucursales |
 |---|---|---|---|---|
 | **Demo** | Gratis, sin límite de tiempo | 1 | 15 | 1 |
 | **Starter** | $15.990 | 5 | 300 | 2 |
 | **Pro** | $21.990 | 20 | 2.000 | 8 |
 
-El Demo se mantiene igual que en la versión anterior de este documento — permanente, no
-por tiempo limitado (ver justificación en sección 2.3 más abajo, sin cambios).
+**Ningún plan base incluye módulos.** Starter y Pro solo definen capacidad — la diferencia
+entre ambos es cuánto usuario/producto/sucursal viene incluido de fábrica, no qué
+funcionalidades trae. Flota, Analytics y Optimización se compran aparte, sobre cualquiera
+de los dos planes (sección 2.4).
 
-### 2.3 Módulos opcionales (add-ons)
+### 2.3 Plan Demo — por qué es local y descargable
+
+A diferencia de Starter y Pro (que corren en el servidor central multi-tenant de Thoth),
+**el Demo se distribuye como una versión descargable que corre 100% en el computador del
+usuario, sin conexión al servidor de producción de Thoth.**
+
+**Por qué:** el servidor central es de costo fijo (`README.md`), pero no infinito — si el
+Demo corriera en el mismo servidor que los clientes que pagan, una campaña de marketing
+exitosa (mucha gente probando el Demo al mismo tiempo) podría degradar el rendimiento para
+los clientes reales. Eso es inaceptable en esta etapa, donde ni siquiera existe todavía un
+compromiso de disponibilidad formal (ver sección 8.3) — el poco margen de infraestructura
+que hay debe protegerse para quien paga, no repartirse con quien está probando gratis.
+
+**Cómo se implementa (a nivel de producto):** un instalador o paquete simplificado (ej. un
+`docker compose up` de un solo comando) que levanta una versión reducida de Thoth —
+Node/Fastify + PostgreSQL local, sin Redis, sin RLS multi-tenant porque hay un solo
+tenant — directamente en el computador del cliente. Cada Demo vive y muere en esa máquina;
+Thoth no mantiene infraestructura para atenderlas, sin importar cuántas personas lo
+descarguen.
+
+**Consecuencia natural, no solo un límite artificial:** al no tener conexión al servidor
+central, el Demo tampoco puede ofrecer nada que dependa de él — sincronización entre
+dispositivos, backups automáticos en la nube, notificaciones push, WebSockets en tiempo
+real. Esto empuja a migrar a un plan pagado tanto por los límites de usuarios/productos/
+sucursales (sección 2.2) como por la necesidad real de operar desde más de un dispositivo
+o ubicación — dos razones independientes que apuntan en la misma dirección.
+
+**Pendiente técnico:** esta arquitectura de "build local descargable" no existe hoy — se
+construye sobre el mismo código base pero como un target de build separado. Ver sección 12.
+
+### 2.4 Mejoras de plan (módulos opcionales)
 
 Se activan sobre cualquier plan base, Starter o Pro, según lo que el negocio realmente
 necesite:
 
-| Módulo | Precio mensual adicional | Para quién tiene sentido | Prerrequisito |
+| Mejora | Precio mensual adicional | Para quién tiene sentido | Incluye |
 |---|---|---|---|
 | **Flota** (vehículos, rutas, mantenimientos) | $9.990 | Cualquier negocio con reparto o despacho propio — no exclusivo de distribuidoras | — |
 | **Analytics** (dashboards, KPIs, predicciones Prophet) | $12.990 | Cualquier negocio que quiera visibilidad de su operación con datos reales | — |
-| **Optimización** (incluye Analytics y agrega Programacion lineal y no lineal, ver `OPTIMIZACION.md`) | $19.990 | Negocios con decisiones de compra o precio complejas (múltiples productos, presupuesto/bodega limitados) | La optimización se apoya en costos, márgenes y demanda que Analytics ya debe estar calculando (ver `OPTIMIZACION.md` sección 13.8) |
+| **Optimización** (programación lineal y no lineal, ver `OPTIMIZACION.md`) | $19.990 | Negocios con decisiones de compra o precio complejas (múltiples productos, presupuesto/sucursal limitados) | **Incluye Analytics** — la optimización no puede funcionar sin los costos, márgenes y demanda que Analytics calcula, así que no se vende por separado (ver `OPTIMIZACION.md` sección 13.8) |
+
+Optimización se piensa como una **mejora de plan escalonada**, no como un add-on
+independiente: el cliente elige entre "Analytics" o "Analytics + Optimización" como dos
+escalones de una misma mejora — nunca necesita comprar Analytics por separado si ya
+contrató Optimización.
 
 **Por qué Flota es opcional para todos y no exclusivo de un rubro:** un restaurant o
 minimarket con reparto propio (delivery) lo puede necesitar tanto como una distribuidora;
 una distribuidora que solo vende para retiro en bodega, no. Restringirlo por rubro sería
 una regla de negocio arbitraria que el producto no necesita imponer.
 
-### 2.4 Add-on de capacidad — sucursales/bodegas adicionales
+### 2.5 Expansión de capacidad
 
-Pensado específicamente para el caso de un restaurant o minimarket con **varias sucursales
-pequeñas** que no necesita más usuarios ni más productos, solo más puntos:
+A diferencia de las mejoras de plan (sección 2.4), esto no agrega funcionalidad nueva —
+solo aumenta los límites del plan base contratado. Usuarios y sucursales se expanden por
+separado, cada uno con precio por unidad suelta y paquetes con descuento por volumen.
+Ambas expansiones son **acumulables sin límite** — no hay un techo de cuántas se pueden
+comprar.
 
-| Add-on | Precio mensual | Qué agrega |
+**Expansión de Usuarios**
+
+| Cantidad | Precio mensual | Precio por usuario |
 |---|---|---|
-| Paquete +5 bodegas/sucursales + 10 Usuarios | $9.990 | 5 bodegas/sucursales adicionales al límite del plan base contratado |
-| Paquete +5 usuarios | $4.990 | 5 usuarios adicionales al límite del plan base contratado |
-| Paquete +10 usuarios | $6.990 | usuarios adicionales al límite del plan base contratado |
+| +1 usuario | $1.990 | $1.990 |
+| +5 usuarios (paquete) | $7.990 | $1.598 *(-20% vs. comprar 5 sueltos)* |
+| +10 usuarios (paquete) | $13.990 | $1.399 *(-30% vs. comprar 10 sueltos)* |
 
-Esto evita forzar a un cliente a saltar de Starter a Pro completo (con todos sus límites
-más altos de usuarios y productos, que quizás no necesita) solo para conseguir más
-sucursales. (ajustar segun el posible consumo que podrian generar en el servidor)
+**Expansión de Sucursales**
 
-### 2.5 Ejemplos aplicados — mismo motor, distinta combinación
+| Cantidad | Precio mensual | Precio por sucursal |
+|---|---|---|
+| +1 sucursal | $3.990 | $3.990 |
+| +3 sucursales (paquete) | $9.990 | $3.330 *(-16% vs. comprar 3 sueltas)* |
+| +5 sucursales (paquete) | $14.990 | $2.998 *(-25% vs. comprar 5 sueltas)* |
+
+**Por qué sucursal cuesta más que usuario por unidad:** una sucursal nueva implica más
+inventario, más movimientos y más complejidad operativa que un usuario adicional — pesa
+más para el negocio del cliente, aunque el costo real de servidor sea bajo en ambos casos
+(el costo de Thoth es fijo por servidor, no variable por usuario/bodega — ver `README.md`).
+
+**Por qué el catálogo de productos NO tiene expansión:** es intencional. Es el único
+límite que no se puede comprar aparte — un negocio que crece en variedad de productos
+(no solo en sucursales o personal) está obligado a subir de Starter a Pro. Esto es lo que
+mantiene a Pro relevante frente a un Starter muy expandido en usuarios y sucursales.
+
+### 2.6 Sucursales y bodegas — cómo se relacionan
+
+**El plan limita y factura tres cosas de forma independiente: usuarios, productos y
+sucursales (sección 2.2). La bodega no es una cuarta unidad facturable — es solo una
+subdivisión interna dentro de cada sucursal, sin costo propio, hasta un tope técnico de
+10 (sección 2.5 explica por qué productos, a diferencia de usuarios y sucursales, no
+tiene forma de expandirse).**
+
+Un negocio puede necesitar más de una bodega dentro del mismo local físico — por ejemplo,
+un restaurant con una bodega de insumos secos y otra de refrigerados, o una distribuidora
+con bodega principal y una aparte para devoluciones. Cobrar por bodega interna generaría
+mala experiencia (el cliente dudaría en organizar mejor su inventario por miedo a que le
+cueste más) sin beneficio real para Thoth, ya que el costo de servidor de una bodega extra
+es prácticamente nulo.
+
+**Guardarraíl técnico (no comercial):** el límite de 10 bodegas por sucursal evita el
+caso extremo de que alguien cree decenas de bodegas bajo una sola sucursal para no pagar
+por más sucursales. No es un límite pensado para generar upsell, solo para evitar abuso.
+
+> **Nota de implementación pendiente:** este modelo asume una jerarquía `Sucursal → Bodegas`
+> que hoy **no existe** en `BASE_DE_DATOS.md` (la tabla `bodegas` no tiene un padre
+> `sucursal_id`). Hasta que ese cambio de esquema se aborde, el límite del plan se debe
+> aplicar de forma transitoria contando bodegas tal como existen hoy, sin agruparlas. Ver
+> la tarea pendiente en la sección 12.
+
+### 2.7 Ejemplos aplicados — mismo motor, distinta combinación
 
 | Negocio | Combinación | Costo mensual |
 |---|---|---|
-| Distribuidora de huevos (1-2 bodegas, reparto propio) | Starter + Flota | $19.990 + $9.990 = **$29.980** |
-| Restaurant con 6 locales pequeños, sin reparto propio | Starter + 1 paquete de sucursales | $19.990 + $6.990 = **$26.980** |
-| Minimarket de un solo local | Starter solo | **$19.990** |
-| Distribuidora en crecimiento que quiere optimizar compras | Pro + Flota + Analytics + Optimización | $29.990 + $9.990 + $12.990 + $14.990 = **$67.960** |
+| Distribuidora de huevos (1-2 sucursales, reparto propio) | Starter + Flota | $15.990 + $9.990 = **$25.980** |
+| Restaurant con 5 locales pequeños, sin reparto propio | Starter (2 incluidas) + paquete +3 sucursales | $15.990 + $9.990 = **$25.980** |
+| Minimarket de un solo local | Starter solo | **$15.990** |
+| Distribuidora en crecimiento que quiere optimizar compras | Pro + Flota + Optimización (incluye Analytics) | $21.990 + $9.990 + $19.990 = **$51.970** |
 
 Ningún rubro está obligado a pagar por módulos que no usa — el mismo motor de Thoth sirve
 para los cuatro casos sin ninguna diferencia de código.
-(ajustar ejemplos a nueva tabla add-on)
 
-### 2.6 Descuentos por ciclo de pago
+### 2.8 Descuentos por ciclo de pago
 
-Se aplican sobre el **total mensual** de la combinación elegida (base + módulos + add-ons
-de capacidad), no sobre cada componente por separado:
+Se aplican sobre el **total mensual** de la combinación elegida (base + mejoras +
+expansiones), no sobre cada componente por separado:
 
 | Ciclo | Descuento |
 |---|---|
@@ -137,43 +234,49 @@ de capacidad), no sobre cada componente por separado:
 | Semestral | -10% sobre el total, cobrado cada 6 meses |
 | Anual | -20% sobre el total, cobrado una vez al año |
 
-**Ejemplo aplicado** (caso de la distribuidora de huevos, Starter + Flota = $29.980/mes):
+**Ejemplo aplicado** (distribuidora de huevos, Starter + Flota = $25.980/mes):
 
 ```
-Mensual:    $29.980 / mes
-Semestral:  $29.980 × 0.9 = $26.982/mes → $161.892 cada 6 meses
-Anual:      $29.980 × 0.8 = $23.984/mes → $287.808 al año
+Mensual:    $25.980 / mes
+Semestral:  $25.980 × 0.9 = $23.382/mes → $140.292 cada 6 meses
+Anual:      $25.980 × 0.8 = $20.784/mes → $249.408 al año
 ```
 
-### 2.7 Sobre un futuro plan "Enterprise"
+### 2.9 Sobre un futuro plan "Enterprise"
 
-No existe un plan Enterprise activo hoy. Con el modelo modular esto importa menos que
-antes — un cliente grande simplemente combina Pro + todos los módulos + varios paquetes de
-sucursales, y ya está pagando un monto proporcional a su tamaño real sin necesitar un plan
-especial. Si en el futuro aparece un caso que realmente no calza (ej. más de 20 usuarios o
-más de 5.000 productos), se resuelve como **cotización personalizada caso a caso**, no
-como un plan publicado en la web.
+No existe un plan Enterprise activo hoy. Con usuarios y sucursales expandibles sin límite,
+el único gatillo real para una cotización personalizada deja de ser "superar los cupos de
+Pro" — eso ya se resuelve comprando expansiones — y pasa a ser una necesidad estructural
+que ninguna expansión cubre:
 
-### 2.8 Nota técnica — cómo se implementa
+- Más de 2.000 productos en el catálogo (el único límite sin expansión, sección 2.5)
+- Múltiples empresas bajo un mismo grupo/holding
+- Necesidad de un SLA formal (ver sección 8.3)
+
+Si alguno de estos casos se repite varias veces, ahí sí tiene sentido formalizar un plan
+Enterprise publicado. Antes de eso, se resuelve caso a caso.
+
+### 2.10 Nota técnica — cómo se implementa
 
 Extiende el mismo patrón ya definido en `BUENAS_PRACTICAS.md` sección 19
-(`tenants.limites` como JSONB), agregando qué módulos están activos:
+(`tenants.limites` como JSONB):
 
 ```json
 {
   "plan_base": "starter",
   "max_usuarios": 5,
-  "max_productos": 500,
-  "max_bodegas": 2,
-  "bodegas_adicionales_compradas": 5,
+  "max_productos": 300,
+  "max_sucursales": 2,
+  "max_bodegas_por_sucursal": 10,
+  "usuarios_adicionales_comprados": 0,
+  "sucursales_adicionales_compradas": 0,
   "modulos_activos": ["flota"]
 }
 ```
 
 El middleware de permisos (`MODULOS.md`, `BUENAS_PRACTICAS.md`) valida contra este campo
-antes de permitir acceso a rutas de Flota/Analytics/Optimización — si el módulo no está en
-`modulos_activos`, la funcionalidad no se muestra ni es accesible por API, sin importar el
-rol del usuario.
+antes de permitir acceso a rutas de Flota/Analytics/Optimización, y antes de permitir crear
+una nueva sucursal o usuario sobre el cupo disponible (base + expansiones compradas).
 
 ---
 
@@ -201,16 +304,16 @@ empresa, con la opción de migrar a una afiliación directa con Transbank más a
 volumen de clientes lo justifica (menor comisión por transacción a mayor volumen).
 
 **Nota sobre facturación de combinaciones modulares:** el cobro recurrente debe soportar
-montos variables por tenant (cada cliente paga una combinación distinta de base + módulos),
-no un monto fijo único como en un modelo de planes cerrados — esto es una consideración
-técnica a validar con el proveedor de pago elegido antes de integrarlo.
+montos variables por tenant (cada cliente paga una combinación distinta de base + mejoras +
+expansiones), no un monto fijo único como en un modelo de planes cerrados — esto es una
+consideración técnica a validar con el proveedor de pago elegido antes de integrarlo.
 
 ### 3.3 Qué NO se define todavía
 
 No se necesita resolver ahora: pasarelas internacionales, múltiples monedas, ni
-facturación recurrente compleja (proration al activar un módulo a mitad de ciclo, etc.) —
-eso se diseña cuando exista una base de clientes real que lo requiera. Para partir, activar
-o desactivar un módulo puede tomar efecto simplemente en el ciclo de facturación siguiente,
+facturación recurrente compleja (proration al activar una mejora o expansión a mitad de
+ciclo, etc.) — eso se diseña cuando exista una base de clientes real que lo requiera. Para
+partir, activar o desactivar algo puede tomar efecto en el ciclo de facturación siguiente,
 sin prorateo.
 
 ---
@@ -246,8 +349,8 @@ Dos razones distintas, que conviene no confundir:
 
 ### 5.1 Perfil de cliente ideal (ICP)
 
-- Negocios pequeños con **1–2 puntos de operación** en su forma más simple (el caso que
-  mejor calza con el plan Starter sin módulos)
+- Negocios pequeños con **1–2 sucursales** en su forma más simple (el caso que mejor calza
+  con el plan Starter sin mejoras)
 - Cualquier rubro — el sistema no está limitado a distribución, aunque ese sea el caso de
   validación inicial
 - Negocios que hoy gestionan inventario, ventas y/o sucursales con Excel, cuadernos, o
@@ -256,12 +359,12 @@ Dos razones distintas, que conviene no confundir:
 ### 5.2 Rubros contemplados explícitamente
 
 El "rubro" no cambia el precio ni restringe funciones (sección 2.1) — se usa como categoría
-de segmentación comercial y como base para sugerir módulos en el onboarding (sección 7.1):
+de segmentación comercial y como base para sugerir mejoras en el onboarding (sección 7.1):
 
-| Rubro | Necesidad típica | Módulos que probablemente le sirven |
+| Rubro | Necesidad típica | Mejoras que probablemente le sirven |
 |---|---|---|
-| **Distribuidora** | Inventario multi-bodega, reparto propio, compras a proveedores | Flota, Analytics |
-| **Restaurant** | Control de insumos y costos, posiblemente varias sucursales pequeñas | Paquete de sucursales, Analytics |
+| **Distribuidora** | Inventario multi-sucursal, reparto propio, compras a proveedores | Flota, Analytics — y Optimización si maneja muchos productos/proveedores y quiere decidir mejor qué y cuánto comprar (ver ejemplo en sección 2.7) |
+| **Restaurant** | Control de insumos y costos, posiblemente varias sucursales pequeñas | Expansión de sucursales, Analytics |
 | **Minimarket** | Inventario y ventas simples, generalmente un solo local | Plan base solo, a veces Analytics |
 | **Otro rubro** | Categoría abierta — cualquier negocio que necesite inventario + ventas + compras | Depende del caso, se define en el onboarding |
 
@@ -274,7 +377,7 @@ quiera Optimización puede activarla igual que una distribuidora.
 |---|---|---|
 | Bsale | POS/ERP multi-sucursal, fuerte en boleta/factura electrónica | 1,5–2,9 UF + IVA/mes (~$70.000–$135.000 CLP) |
 | GranLoop | Inventario con IA para minimarkets/almacenes/botillerías | $9.990–$40.000 CLP/mes |
-| **Thoth** | ERP modular — cada negocio arma su combinación (base + módulos) | $19.990–$68.000 CLP/mes aprox., según combinación |
+| **Thoth** | ERP modular — cada negocio arma su combinación (base + mejoras + expansión) | $15.990–$52.000 CLP/mes aprox., según combinación |
 
 No es una comparación exhaustiva — solo la referencia mínima para justificar que el
 posicionamiento de precio de Thoth es razonable frente a lo que ya existe en el mercado
@@ -297,7 +400,8 @@ En paralelo o después de los primeros clientes directos, sumar presencia en red
 orientada a dueños de pyme (no a desarrolladores) — casos de uso reales, antes/después de
 usar el sistema, contenido educativo simple (ej. "cómo saber si estás vendiendo bajo el
 costo", conectado directamente a `LOGICA_NEGOCIO.md`). El modelo modular además da un
-ángulo de venta natural: "paga solo por lo que tu negocio realmente usa".
+ángulo de venta natural: "paga solo por lo que tu negocio realmente usa, y crece de a
+poco sin saltos de precio grandes".
 
 ### 6.3 Principio de autoservicio
 
@@ -306,8 +410,9 @@ sin depender de que alguien lo instale personalmente en cada cliente nuevo. Esto
 obligatorio, no opcional, porque el soporte inicial es una sola persona (sección 8) — un
 modelo que dependa de instalación asistida no escala más allá de un puñado de clientes.
 Esto refuerza el principio de diseño ya declarado en `README.md` ("la aplicación debe ser
-completamente intuitiva"). El modelo modular no debe complicar esto: activar/desactivar un
-módulo debe ser un simple toggle en la configuración del tenant, no un proceso manual.
+completamente intuitiva"). El modelo modular no debe complicar esto: activar una mejora o
+comprar una expansión debe ser un simple botón en la configuración del tenant, no un
+proceso manual.
 
 ---
 
@@ -319,11 +424,12 @@ módulo debe ser un simple toggle en la configuración del tenant, no un proceso
 1. Cliente se registra desde la web (crea su tenant automáticamente)
 2. Wizard pregunta: "¿A qué se dedica tu negocio?"
    → Distribuidora / Restaurant / Minimarket / Otro
-3. Según la respuesta, Thoth sugiere (no obliga) los módulos de la tabla 5.2
+3. Según la respuesta, Thoth sugiere (no obliga) las mejoras de la tabla 5.2
    ej: "Como tienes reparto propio, ¿quieres activar el módulo Flota?"
 4. Cliente confirma su combinación (puede ignorar la sugerencia)
 5. Elige plan base (Demo por defecto, puede subir a Starter/Pro cuando quiera)
-6. Wizard inicial: nombre de la empresa, primera bodega, primeros productos
+6. Wizard inicial: nombre de la empresa, primera sucursal (con su primera bodega
+   creada automáticamente), primeros productos
 7. Tutoriales en video enlazados directamente en cada pantalla clave
 8. Cliente opera solo — soporte por correo si algo no queda claro
 ```
@@ -334,10 +440,10 @@ Complemento directo del principio de autoservicio — cubrir primero los flujos 
 frecuentes y de mayor fricción potencial:
 
 1. Cargar el catálogo de productos inicial
-2. Registrar el stock inicial por bodega
+2. Registrar el stock inicial por sucursal/bodega
 3. Crear y confirmar el primer pedido
 4. Registrar una compra y recibir mercadería
-5. Activar y usar un módulo opcional (Flota o Analytics) una vez contratado
+5. Activar una mejora de plan (Flota o Analytics) una vez contratada
 6. Leer el dashboard principal (una vez el cliente tenga Analytics activo)
 
 ### 7.3 Migración de datos desde otro sistema
@@ -392,9 +498,9 @@ MRR = \sum (\text{precio mensual efectivo de cada tenant activo})
 ```
 
 > `precio mensual efectivo` ya normaliza los ciclos semestral/anual a su equivalente
-> mensual (sección 2.6), y suma la combinación completa de cada tenant (base + módulos +
-> add-ons de capacidad) — así el MRR es comparable sin importar cómo pagó o qué combinación
-> eligió cada cliente.
+> mensual (sección 2.8), y suma la combinación completa de cada tenant (base + mejoras +
+> expansiones) — así el MRR es comparable sin importar cómo pagó o qué combinación eligió
+> cada cliente.
 
 ```math
 \text{Tasa de churn mensual} = \frac{\text{tenants que cancelaron en el mes}}{\text{tenants activos al inicio del mes}} \times 100
@@ -409,11 +515,11 @@ ARPU = \frac{MRR}{\text{tenants activos}}
 | Métrica | Qué mide | Por qué importa |
 |---|---|---|
 | MRR | Ingreso recurrente mensual | El número base de salud del negocio |
-| Tenants activos | Clientes pagando (Starter + Pro, con o sin módulos) | Crecimiento real, no solo demos registradas |
+| Tenants activos | Clientes pagando (Starter + Pro, con o sin mejoras) | Crecimiento real, no solo demos registradas |
 | Tasa de churn | % que cancela cada mes | Si el producto retiene o no |
 | Demos → clientes pagos | % de conversión | Si el plan Demo está calibrado correctamente |
 | ARPU | Ingreso promedio por cliente | Si vale la pena invertir en adquisición |
-| Módulos activos por tenant (promedio) | Cuántos add-ons contrata un cliente típico | Indica si el modelo modular está generando upsell real, o si nadie sale del plan base |
+| Mejoras y expansiones por tenant (promedio) | Cuánto crece un cliente típico sobre su plan base | Indica si el modelo modular está generando upsell real |
 
 No se agregan métricas más avanzadas (CAC, LTV de cliente del propio negocio SaaS, cohortes)
 hasta tener suficientes clientes reales para que esos números signifiquen algo — con menos
@@ -429,10 +535,12 @@ Conecta las decisiones de este documento con las fases técnicas de `ROADMAP.md`
 |---|---|
 | Validación interna (distribuidora de huevos) | Fase 1–2 técnicas (Core + Operaciones) — en curso |
 | Formalización de la empresa | Decisión de negocio, independiente del código |
-| Apertura de venta a clientes externos (Starter/Pro + módulos) | Empresa formalizada + Fase 1–3 técnicas estables |
+| Apertura de venta a clientes externos (Starter/Pro + mejoras) | Empresa formalizada + Fase 1–3 técnicas estables |
 | Habilitar Webpay/Flow con soporte de montos variables por combinación | Empresa formalizada (sección 3) |
-| Módulo Optimización disponible como add-on real | Fase 6 técnica completa (`OPTIMIZACION.md`) |
-| Reconsiderar plan Enterprise | Cuando aparezca demanda real por límites mayores (sección 2.7) |
+| Mejora Optimización disponible en producción | Fase 6 técnica completa (`OPTIMIZACION.md`) |
+| Implementar jerarquía Sucursal → Bodegas en `BASE_DE_DATOS.md` | Ver sección 12 — pendiente técnico, sin fecha asignada aún |
+| Construir el build local descargable del plan Demo | Ver sección 12 — pendiente técnico, idealmente antes de abrir venta externa (sección 2.3) |
+| Reconsiderar plan Enterprise | Cuando aparezca demanda real por límites mayores (sección 2.9) |
 
 ---
 
@@ -452,10 +560,36 @@ errores legales por documentación informal:
 
 ---
 
+## 12. Pendientes Técnicos
+
+Cosas que este documento asume pero que todavía no existen en la implementación —
+señaladas aquí para no perderlas, se abordan en otra sesión de trabajo técnica, no en
+este documento de negocio:
+
+- [ ] **Jerarquía `Sucursal → Bodegas`** (sección 2.6, `BASE_DE_DATOS.md`): hoy
+      `BASE_DE_DATOS.md` solo define la tabla `bodegas`, sin un padre `sucursal`. Se
+      necesita: tabla nueva `sucursales`, columna `bodegas.sucursal_id` (FK), migración de
+      datos existentes (cada bodega actual pasaría a ser la primera bodega de su propia
+      sucursal), y actualizar el middleware de límites de plan para contar sucursales en
+      vez de bodegas.
+- [ ] Mientras el punto anterior no esté resuelto, el límite de plan se debe aplicar de
+      forma transitoria sobre el conteo actual de bodegas — dejar esto documentado también
+      en `BASE_DE_DATOS.md` cuando se aborde, para que no quede como una inconsistencia
+      silenciosa entre lo que cobra el negocio y lo que limita el código.
+- [ ] **Build local descargable del plan Demo** (sección 2.3): no existe hoy un target de
+      build separado que corra Thoth 100% local sin servidor central. Se necesita definir
+      qué se simplifica (sin Redis, sin RLS multi-tenant, un solo tenant embebido) y cómo
+      se empaqueta para que alguien sin conocimientos técnicos pueda instalarlo con un
+      solo paso — probablemente un instalador o un `docker compose up` de un comando.
+
+---
+
 *Ver [README.md](./README.md) para la visión general del producto.*
 *Ver [ROADMAP.md](./ROADMAP.md) para las fases técnicas que este documento asume como
 prerrequisito.*
 *Ver [LOGICA_NEGOCIO.md](./LOGICA_NEGOCIO.md) y [OPTIMIZACION.md](./OPTIMIZACION.md) para
-las capacidades del producto que sustentan los módulos opcionales.*
+las capacidades del producto que sustentan las mejoras de plan.*
+*Ver [BASE_DE_DATOS.md](./BASE_DE_DATOS.md) para el esquema actual de `bodegas`, pendiente
+de la jerarquía de sucursales descrita en la sección 12.*
 *Ver [BUENAS_PRACTICAS.md](./BUENAS_PRACTICAS.md) sección 19 para los límites técnicos
 (`tenants.limites`) que implementan el modelo modular de la sección 2.*

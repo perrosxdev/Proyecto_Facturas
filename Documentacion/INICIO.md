@@ -389,6 +389,7 @@ ETAPA 8 · Fase 6 — Escala y Optimización
 | [BUENAS_PRACTICAS.md](./BUENAS_PRACTICAS.md) | Seguridad, testing, CI/CD, convenciones |
 | [LOGICA_NEGOCIO.md](./LOGICA_NEGOCIO.md) | Fórmulas de precio, margen, inventario, crédito y flota |
 | [OPTIMIZACION.md](./OPTIMIZACION.md) | Programación lineal y no lineal — mezcla óptima, precio sombra, precio con elasticidad |
+| [NEGOCIO_SAAS.md](./NEGOCIO_SAAS.md) | Modelo de negocio — planes, precios, medios de pago, mercado objetivo |
 | [Servidor.md](./Servidor_Documentacion/Servidor.md) | Hardware, instalación y administración del servidor |
 
 ---

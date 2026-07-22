@@ -18,7 +18,8 @@
 | 7 | [BUENAS_PRACTICAS.md](./Documentacion/BUENAS_PRACTICAS.md) | Seguridad, CI/CD, testing, convenciones |
 | 8 | [LOGICA_NEGOCIO.md](./Documentacion/LOGICA_NEGOCIO.md) | Fórmulas de negocio: precios, márgenes, inventario, crédito, flota y preguntas clave |
 | 9 | [OPTIMIZACION.md](./Documentacion/OPTIMIZACION.md) | Programación lineal y no lineal: mezcla óptima, precio sombra, precio con elasticidad |
-| 10 | [Servidor.md](./Servidor_Documentacion/Servidor.md) | Hardware, instalación y administración del servidor |
+| 10 | [NEGOCIO_SAAS.md](./Documentacion/NEGOCIO_SAAS.md) | Modelo de negocio: planes, precios, medios de pago, mercado objetivo y adquisición de clientes |
+| 11 | [Servidor.md](./Servidor_Documentacion/Servidor.md) | Hardware, instalación y administración del servidor |
 
 ---
 

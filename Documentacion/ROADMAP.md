@@ -223,11 +223,17 @@ Conectarse directamente al SII es complejo (XML firmado con certificado digital,
 - [ ] Ejecución asíncrona vía BullMQ + WebSocket para modelos grandes
 - [ ] Permisos (`admin`/`supervisor`) y límites de plan (`max_variables_optimizacion`, `max_corridas_por_mes`)
 
+### Módulo de Planes y Facturación (ver `NEGOCIO_SAAS.md` para el diseño completo)
+- [ ] Middleware de límites por plan — validar usuarios/productos/sucursales contra `tenants.limites` (base + expansiones compradas) antes de crear recursos
+- [ ] Control de acceso a mejoras de plan (`modulos_activos`) — bloquear rutas de Flota/Analytics/Optimización si el módulo no está activo para el tenant
+- [ ] Flujo de compra de expansiones (usuarios y sucursales por separado, unidad suelta o paquete) — acumulables sin límite
+- [ ] Integración de cobro recurrente (Webpay Plus / Flow.cl) con soporte de montos variables por combinación de tenant (base + mejoras + expansiones)
+- [ ] Build local descargable del plan Demo — target de build separado, sin Redis ni RLS multi-tenant (ver `NEGOCIO_SAAS.md` sección 2.3)
+
 ### Otras tareas de escala
 - [ ] Multi-rubro: adaptar módulos para retail, servicios, etc.
 - [ ] Marketplace de integraciones (contabilidad, logística externa)
 - [ ] App store de Thoth (módulos opcionales por tenant)
-- [ ] Planes diferenciados (starter / pro / enterprise)
 - [ ] API pública para integraciones de clientes
 - [ ] Centro de datos regional (si la escala lo justifica)
 
@@ -250,3 +256,4 @@ Después de cada fase, antes de pasar a la siguiente:
 *Ver [BUENAS_PRACTICAS.md](./BUENAS_PRACTICAS.md) para convenciones, seguridad y CI/CD.*
 *Ver [LOGICA_NEGOCIO.md](./LOGICA_NEGOCIO.md) para las fórmulas de precio, margen e inventario implementadas en las Fases 1 y 3.*
 *Ver [OPTIMIZACION.md](./OPTIMIZACION.md) para el diseño completo del módulo de optimización de la Fase 6.*
+*Ver [NEGOCIO_SAAS.md](./NEGOCIO_SAAS.md) para el modelo de planes y facturación que el Módulo de Planes y Facturación de la Fase 6 implementa.*
